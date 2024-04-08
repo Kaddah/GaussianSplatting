@@ -55,7 +55,7 @@ Die .exe Datei ist nun in GaussianSplatting/build/Debug/Gaussian-Splatting.exe z
 
 # vcpkg
 ## vcpkg installieren
-1. Clone das Repo von Github (zum Beispiel neben das Repo "GaussianSplatting)
+1. Clone das Repo von Github (zum Beispiel neben das Repo "GaussianSplatting")
 ```
 git clone https://github.com/microsoft/vcpkg.git
 ```
