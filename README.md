@@ -69,6 +69,6 @@ bootstrap-vcpkg.bat
 ```
 
 ## vcpkg verwenden
-im Repo liegt eine `vcpkg.json` Datei hier können die nötigen Dependencies in die liste mit aufgenommen werden.
+im Repo liegt eine `vcpkg.json` Datei hier können die nötigen Dependencies in die liste mit aufgenommen werden. Zusätzlich müssen diese wie auf der Webseite beschrieben in das vcpkg Repo installiert werden.
 
 Dependencies können hier gesucht werden: https://vcpkg.io/en/packages
