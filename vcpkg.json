@@ -1,8 +1,9 @@
 {
-  "name": "gaussiansplatting",
-  "version": "0.0.1",
-  "dependencies": [
-    "fmt",
-    "directxtk12"
-  ]
+    "name": "gaussiansplatting",
+    "version": "0.0.1",
+    "dependencies": [
+        "directxtk12",
+        "glm",
+        "imgui"
+    ]
 }

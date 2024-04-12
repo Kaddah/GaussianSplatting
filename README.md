@@ -5,6 +5,9 @@
 1. CMake installieren
 2. vcpkg installieren
 
+#neue Bibliotheken hinzufügen
+
+
 # CMake
 ## CMake installieren
 1. Öffne cmd (als admin)
@@ -17,8 +20,11 @@ cmake --version
 ```
 Nun sollte auf der Konsole die aktuelle CMake version (3.29.0) angezeigt wird.
 
-In der Datei "CMakeList.txt" ist hinterlegt das ältere CMake Versionen als v3.29.0 nicht Aktzepiert werden. 
-
+In der Datei "CMakeList.txt" ist hinterlegt, das ältere CMake Versionen als v3.29.0 nicht Aktzepiert werden. 
+passe die Pfade der ersten variablen auf dein System an:
+```
+set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
+```
 
 ## Visual Studio Projekt erstellen
 
@@ -72,3 +78,13 @@ bootstrap-vcpkg.bat
 im Repo liegt eine `vcpkg.json` Datei hier können die nötigen Dependencies in die liste mit aufgenommen werden. Zusätzlich müssen diese wie auf der Webseite beschrieben in das vcpkg Repo installiert werden.
 
 Dependencies können hier gesucht werden: https://vcpkg.io/en/packages
+
+1. navigiere auf der Konsole in den Ordner/Repo "vcpkg"
+2. installiere für das Projekt alle nötigen pakete auf deinem Rechner mit: 			
+	!Achte darauf das du deinen Pfad anpassen musst!
+```
+.\vcpkg install @D:/MyWorspace/GaussianSplatting/requirements.txt
+```
+
+Sind alle packete erfolgreich auf deinem Rechner installiert, sollte das CMakeLists.txt file diese finden und beim erstellen/compilieren in das Projekt einbauen.
+(Beachte dass das File die Pakete nur finden kann wenn du die ToolChain variable im CMakeList.txt angepasst hast (siehe Kapitel CMake))
