@@ -21,7 +21,8 @@ cmake --version
 Nun sollte auf der Konsole die aktuelle CMake version (3.29.0) angezeigt wird.
 
 In der Datei "CMakeList.txt" ist hinterlegt, das ältere CMake Versionen als v3.29.0 nicht Aktzepiert werden. 
-passe die Pfade der ersten variablen auf dein System an:
+
+Passe die Pfade der ersten variablen im File "CMakeList.txt" auf dein System an:
 ```
 set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
 ```
