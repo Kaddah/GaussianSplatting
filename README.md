@@ -70,8 +70,8 @@ bootstrap-vcpkg.bat
 ```
 ./vcpkg version
 ```
-Erstelle dir eine Systemvariable mit den Namen `VCPKG_PATH` welche auf das vcpkg.cmake file im gerade installierten Repository liegt.
-Zum Beispiel: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake`
+4. Erstelle dir eine Systemvariable mit den Namen `VCPKG_PATH` welche auf das vcpkg.cmake file im gerade installierten Repository liegt.
+Zum Beispiel: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake` (siehe SystemEnvironment.png)
 
 ## vcpkg verwenden
 im Repo liegt eine `vcpkg.json` Datei hier können die nötigen Dependencies in die liste mit aufgenommen werden. Zusätzlich müssen diese wie auf der Webseite beschrieben in das vcpkg Repo installiert werden.
