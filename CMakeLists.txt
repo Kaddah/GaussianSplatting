@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.29)
 
 #set vcpkg location
-set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_PATH})
 #create project
 project(gaussian_splatting LANGUAGES CXX)
 #set unicode compiler
