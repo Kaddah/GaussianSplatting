@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.29)
 
 #set vcpkg location
-set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_PATH})
 #create project
 project(gaussian_splatting LANGUAGES CXX)
 #set unicode compiler
@@ -33,7 +33,7 @@ macro(dynamic_dependencies __PATH__)
 	string(FIND "${VCPKG_JSON_CONTENTS}" "\"dependencies\": [" DEPENDENCIES_START_POS)
 	math(EXPR DEPENDENCIES_START_POS "${DEPENDENCIES_START_POS} + 17")
 	string(SUBSTRING "${VCPKG_JSON_CONTENTS}" ${DEPENDENCIES_START_POS} -1 DEPENDENCIES_SUBSTRING)
-	# Finde index starts with ]
+	# Find index starts with ]
 	string(FIND "${DEPENDENCIES_SUBSTRING}" "]" DEPENDENCIES_END_POS)
 	string(SUBSTRING "${DEPENDENCIES_SUBSTRING}" 0 ${DEPENDENCIES_END_POS} EXTRACTED_DEPENDENCIES)
 	
@@ -43,22 +43,22 @@ macro(dynamic_dependencies __PATH__)
 	string(REPLACE "\n" "" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
 	string(REPLACE "," ";" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
 	
-	# Lade jedes Paket mit vcpkg
+	# find each package at vcpkg
 	foreach(PACKAGE ${EXTRACTED_DEPENDENCIES})
 		find_package(${PACKAGE} REQUIRED)
 		message("load package: ${PACKAGE}")
 	endforeach()
+	
+	# generate .exe
 	add_executable(${NAME_EXE} ${SOURCE})
-	#lade zusatz files
+	
+	#load additional files
 	target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 	target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
-	#target_link_libraries(${NAME_EXE} PRIVATE user32 gdi32 kernel32)
-	# Angeben, dass das Unterkompilat WinMain verwenden soll
+	
+	# Specify that the subcompile should use WinMain
 	set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
-	#foreach(PACKAGE ${EXTRACTED_DEPENDENCIES})
-	#	target_link_libraries(${NAME_EXE} PRIVATE ${PACKAGE}::${PACKAGE})
-	#	message("load: ${PACKAGE}")
-	#endforeach()
+
 	foreach(DEPENDENCY ${EXTRACTED_DEPENDENCIES})
         message("link package: ${DEPENDENCY}")
 		if (DEPENDENCY STREQUAL "directxtk12")
@@ -68,13 +68,11 @@ macro(dynamic_dependencies __PATH__)
 		endif()
     endforeach()
 	
-	# Fügen Sie die HLSL-Dateien Ihrem Projekt hinzu
-
-
-	# Kopieren Sie die HLSL-Dateien in das Ausgabeverzeichnis für die Ausführung
-	# Kopiere die Shader-Dateien in das Build-Verzeichnis
+	# Add the HLSL files to your project
 	foreach(shader_file IN ITEMS ${HLSL_FILES})
+		# Copy the HLSL files to the output directory for execution
 		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${shader_file} COPYONLY)
+		# Copy the shader files to the build directory
 		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/${shader_file} COPYONLY)
 	endforeach(shader_file)
 endmacro()
