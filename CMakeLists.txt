@@ -75,6 +75,7 @@ macro(dynamic_dependencies __PATH__)
 	# Kopiere die Shader-Dateien in das Build-Verzeichnis
 	foreach(shader_file IN ITEMS ${HLSL_FILES})
 		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${shader_file} COPYONLY)
+		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/${shader_file} COPYONLY)
 	endforeach(shader_file)
 endmacro()
 
