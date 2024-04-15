@@ -37,7 +37,7 @@ bootstrap-vcpkg.bat
 ./vcpkg version
 ```
 Create a system variable with the name `VCPKG_PATH` which is located on the vcpkg.cmake file in the currently installed repository.
-For example: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake`.
+For example: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake`. (see System_Variable.png)
 
 ## use vcpkg
 there is a `vcpkg.json` file in the repo where the necessary dependencies can be added to the list. In addition, these must be installed in the vcpkg repo as described on the website.
