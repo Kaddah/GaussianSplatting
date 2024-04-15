@@ -5,7 +5,7 @@
 1. CMake installieren
 2. vcpkg installieren
 
-#neue Bibliotheken hinzufügen
+neue Bibliotheken hinzufügen
 
 
 # CMake
@@ -26,39 +26,6 @@ Passe die Pfade der ersten variablen im File "CMakeList.txt" auf dein System an:
 ```
 set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
 ```
-
-## Visual Studio Projekt erstellen
-
-1. Öffne cmd
-2. Navigiere zum Projekt (zum Beispiel: D:\MyWorspace\GaussianSplatting)
-```
-cd D:\MyWorspace\GaussianSplatting
-```
-3. Erstelle einen neuen Ordner in welchen das Projekt Erstellt wird (zb. build)
-```
-mkdir build
-```
-5. Navigiere in den neuen Ordner
-```
-cd build
-```
-6. Erstelle hier das Projekt auf der Basis der Dateien im Überordner (im überordner muss CMakeLists.txt und main.cpp liegen)
-```
-cmake ..
-```
-
-
-## Projekt Compilieren
-
-1. Navigiere zum Projekt
-```
-cd D:\MyWorspace\GaussianSplatting
-```
-2. Erstelle eine ausführbare datei
-```
-cmake --build build
-```		
-Die .exe Datei ist nun in GaussianSplatting/build/Debug/Gaussian-Splatting.exe zu finden
 
 # vcpkg
 ## vcpkg installieren
@@ -89,3 +56,37 @@ Dependencies können hier gesucht werden: https://vcpkg.io/en/packages
 
 Sind alle packete erfolgreich auf deinem Rechner installiert, sollte das CMakeLists.txt file diese finden und beim erstellen/compilieren in das Projekt einbauen.
 (Beachte dass das File die Pakete nur finden kann wenn du die ToolChain variable im CMakeList.txt angepasst hast (siehe Kapitel CMake))
+
+# Visual Studio Projekt erstellen
+
+1. Öffne cmd
+2. Navigiere zum Projekt (zum Beispiel: D:\MyWorspace\GaussianSplatting)
+```
+cd D:\MyWorspace\GaussianSplatting
+```
+3. Erstelle einen neuen Ordner in welchen das Projekt Erstellt wird (zb. build)
+```
+mkdir build
+```
+5. Navigiere in den neuen Ordner
+```
+cd build
+```
+6. Erstelle hier das Projekt auf der Basis der Dateien im Überordner (im überordner muss CMakeLists.txt und main.cpp liegen)
+```
+cmake ..
+```
+
+
+# Projekt Compilieren
+
+1. Navigiere zum Projekt
+```
+cd D:\MyWorspace\GaussianSplatting
+```
+2. Erstelle eine ausführbare datei
+```
+cmake --build build
+```		
+Die .exe Datei ist nun in GaussianSplatting/build/Debug/Gaussian-Splatting.exe zu finden
+
