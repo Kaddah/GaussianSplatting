@@ -1,91 +1,87 @@
 # ToDo
 ```diff
-- Bitte Repo Clonen und dieser README folgen.
+- Please clone the repo and follow this README.
 ```
-1. CMake installieren
-2. vcpkg installieren
+1. install CMake
+2. Install vcpkg
 
-#neue Bibliotheken hinzufügen
+#add new libraries
 
 
 # CMake
-## CMake installieren
-1. Öffne cmd (als admin)
+## Install CMake
+1. open cmd (as admin)
 ```
 pip install cmake
 ```
-2. Prüfe ob alles funktioniert
+2. check if everything works
 ```
 cmake --version
 ```
-Nun sollte auf der Konsole die aktuelle CMake version (3.29.0) angezeigt wird.
+The current CMake version (3.29.0) should now be displayed on the console.
 
-In der Datei "CMakeList.txt" ist hinterlegt, das ältere CMake Versionen als v3.29.0 nicht Aktzepiert werden. 
-
-Passe die Pfade der ersten variablen im File "CMakeList.txt" auf dein System an:
-```
-set(CMAKE_TOOLCHAIN_FILE "D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake")
-```
-
-## Visual Studio Projekt erstellen
-
-1. Öffne cmd
-2. Navigiere zum Projekt (zum Beispiel: D:\MyWorspace\GaussianSplatting)
-```
-cd D:\MyWorspace\GaussianSplatting
-```
-3. Erstelle einen neuen Ordner in welchen das Projekt Erstellt wird (zb. build)
-```
-mkdir build
-```
-5. Navigiere in den neuen Ordner
-```
-cd build
-```
-6. Erstelle hier das Projekt auf der Basis der Dateien im Überordner (im überordner muss CMakeLists.txt und main.cpp liegen)
-```
-cmake ..
-```
-
-
-## Projekt Compilieren
-
-1. Navigiere zum Projekt
-```
-cd D:\MyWorspace\GaussianSplatting
-```
-2. Erstelle eine ausführbare datei
-```
-cmake --build build
-```		
-Die .exe Datei ist nun in GaussianSplatting/build/Debug/Gaussian-Splatting.exe zu finden
+In the file "CMakeList.txt" is stored that older CMake versions than v3.29.0 are not activated. 
 
 # vcpkg
-## vcpkg installieren
-1. Clone das Repo von Github (zum Beispiel neben das Repo "GaussianSplatting")
+## Install vcpkg
+1. clone the repo from Github (for example next to the repo "GaussianSplatting")
 ```
 git clone https://github.com/microsoft/vcpkg.git
 ```
-2. Navigiere in das Repo unf führe das bootstrap-vcpkg.bat file aus
+2. navigate to the repo and execute the bootstrap-vcpkg.bat file
 ```
 bootstrap-vcpkg.bat
 ```
-3. Teste ob vcpkg funktioniert
+3. test if vcpkg works
 ```
 ./vcpkg version
 ```
+Create a system variable with the name `VCPKG_PATH` which is located on the vcpkg.cmake file in the currently installed repository.
+For example: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake`. (see System_Variable.png)
 
-## vcpkg verwenden
-im Repo liegt eine `vcpkg.json` Datei hier können die nötigen Dependencies in die liste mit aufgenommen werden. Zusätzlich müssen diese wie auf der Webseite beschrieben in das vcpkg Repo installiert werden.
+## use vcpkg
+there is a `vcpkg.json` file in the repo where the necessary dependencies can be added to the list. In addition, these must be installed in the vcpkg repo as described on the website.
 
-Dependencies können hier gesucht werden: https://vcpkg.io/en/packages
+Dependencies can be searched for here: https://vcpkg.io/en/packages
 
-1. navigiere auf der Konsole in den Ordner/Repo "vcpkg"
-2. installiere für das Projekt alle nötigen pakete auf deinem Rechner mit: 			
-	!Achte darauf das du deinen Pfad anpassen musst!
+1. navigate to the folder/repo "vcpkg" on the console
+2. install all necessary packages for the project on your computer: 			
+	!Make sure that you have to adjust your path!
 ```
 .\vcpkg install @D:/MyWorspace/GaussianSplatting/requirements.txt
 ```
 
-Sind alle packete erfolgreich auf deinem Rechner installiert, sollte das CMakeLists.txt file diese finden und beim erstellen/compilieren in das Projekt einbauen.
-(Beachte dass das File die Pakete nur finden kann wenn du die ToolChain variable im CMakeList.txt angepasst hast (siehe Kapitel CMake))
+If all packages are successfully installed on your computer, the CMakeLists.txt file should find them and include them in the project when creating/compiling.
+
+# Create Visual Studio project
+
+1. open cmd
+2. navigate to the project (for example: D:\MyWorspace\GaussianSplatting)
+```
+cd D:\MyWorspace\GaussianSplatting
+```
+3. create a new folder in which the project is created (e.g. build)
+```
+mkdir build
+```
+5. navigate to the new folder
+```
+cd build
+```
+6. create the project here based on the files in the parent folder (CMakeLists.txt and main.cpp must be in the parent folder)
+```
+cmake ..
+```
+
+# Compile project
+
+1. navigate to the project
+```
+cd D:\MyWorspace\GaussianSplatting
+```
+2. create an executable file
+```
+cmake --build build
+```		
+The .exe file can now be found in GaussianSplatting/build/Debug/Gaussian-Splatting.exe
+
