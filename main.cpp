@@ -10,6 +10,7 @@
 #include <DirectXMath.h>
 #include <initguid.h>
 #include <imgui.h>
+#include <glm/glm.hpp>
 #include "vector.h"
 #include "matrix.h"
 #include "d3dx12.h"
@@ -20,8 +21,8 @@ using namespace DirectX;
 
 struct Vertex {
     Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-    XMFLOAT3 pos;
-    XMFLOAT4 color;
+    glm::vec3(pos);
+    glm::vec4(color);
 };
 
 HWND hwnd = NULL;
@@ -513,10 +514,11 @@ bool InitD3D()
 
     //triangle
     Vertex vList[] = {
-    { 0.0f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
-    { 0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
-    { -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+     Vertex(0.0f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f),
+     Vertex(0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f),
+     Vertex(-0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f)
     };
+
 
     int vBufferSize = sizeof(vList);
 
