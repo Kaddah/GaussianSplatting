@@ -25,8 +25,8 @@ run_vcpkg(
 #create project
 project(gaussian_splatting LANGUAGES CXX)
 
-set(SOURCE main.cpp DxException.cpp)
-
+#set(SOURCE main.cpp DxException.cpp)
+file(GLOB SOURCE *.cpp)
 set(NAME_EXE Gaussian-Splatting)
 
 
