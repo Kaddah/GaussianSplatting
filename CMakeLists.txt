@@ -1,84 +1,59 @@
 cmake_minimum_required(VERSION 3.29)
 
-#set vcpkg location
-set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_PATH})
+set(PKGS directxtk12 glm imgui)
+
+
+include(FetchContent)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+  cmake_policy(SET CMP0135 NEW)
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_UNICODE /DUNICODE")
+# Add project_options from https://github.com/aminya/project_options
+# Change the version in the following URL to update the package (watch the releases of the repository for future updates)
+set(PROJECT_OPTIONS_VERSION "v0.35.1")
+FetchContent_Declare(
+  _project_options
+  URL https://github.com/aminya/project_options/archive/refs/tags/${PROJECT_OPTIONS_VERSION}.zip)
+FetchContent_MakeAvailable(_project_options)
+include(${_project_options_SOURCE_DIR}/Index.cmake)
+
+# install vcpkg dependencies: - should be called before defining project()
+run_vcpkg(
+    VCPKG_URL "https://github.com/microsoft/vcpkg.git"
+    VCPKG_REV "10e052511428d6b0c7fcc63a139e8024bb146032"
+)
 #create project
 project(gaussian_splatting LANGUAGES CXX)
-#set unicode compiler
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_UNICODE /DUNICODE")
-# set HLSL-compiler
-set(HLSL_FLAGS "-T ps_4_0_level_9_1" CACHE STRING "HLSL Compiler Flags")
 
-set_source_files_properties(PixelShader.hlsl PROPERTIES VS_SHADER_FLAGS ${HLSL_FLAGS})
-
-# varaibles
-set(HLSL_FILES VertexShader.hlsl PixelShader.hlsl)
-
-set(SOURCE main.cpp DxException.cpp DxException.h)
-
-
+#set(SOURCE main.cpp DxException.cpp)
+file(GLOB SOURCE *.cpp)
 set(NAME_EXE Gaussian-Splatting)
 
-set(VCPKG_JSON vcpkg.json)
 
+foreach(PKG IN ITEMS ${PKGS})
+	find_package(${PKG} REQUIRED)
+endforeach(PKG)
 
-foreach(PACKAGE ${EXTRACTED_DEPENDENCIES})
-		find_package(${PACKAGE} REQUIRED)
-		message("load package: ${PACKAGE}")
-	endforeach()
-macro(dynamic_dependencies __PATH__)
-	# read vcpkg.json-file
-	file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${__PATH__}" VCPKG_JSON_CONTENTS)
-	
-	# Find index starts with "dependencies": [ 
-	string(FIND "${VCPKG_JSON_CONTENTS}" "\"dependencies\": [" DEPENDENCIES_START_POS)
-	math(EXPR DEPENDENCIES_START_POS "${DEPENDENCIES_START_POS} + 17")
-	string(SUBSTRING "${VCPKG_JSON_CONTENTS}" ${DEPENDENCIES_START_POS} -1 DEPENDENCIES_SUBSTRING)
-	# Find index starts with ]
-	string(FIND "${DEPENDENCIES_SUBSTRING}" "]" DEPENDENCIES_END_POS)
-	string(SUBSTRING "${DEPENDENCIES_SUBSTRING}" 0 ${DEPENDENCIES_END_POS} EXTRACTED_DEPENDENCIES)
-	
-	# formating
-	string(REPLACE "\"" "" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
-	string(REPLACE " " "" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
-	string(REPLACE "\n" "" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
-	string(REPLACE "," ";" EXTRACTED_DEPENDENCIES "${EXTRACTED_DEPENDENCIES}")
-	
-	# find each package at vcpkg
-	foreach(PACKAGE ${EXTRACTED_DEPENDENCIES})
-		find_package(${PACKAGE} REQUIRED)
-		message("load package: ${PACKAGE}")
-	endforeach()
-	
-	# generate .exe
-	add_executable(${NAME_EXE} ${SOURCE})
-	
-	#load additional files
-	target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-	target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
-	
-	# Specify that the subcompile should use WinMain
-	set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
+# generate .exe
+add_executable(${NAME_EXE} ${SOURCE})
 
-	foreach(DEPENDENCY ${EXTRACTED_DEPENDENCIES})
-        message("link package: ${DEPENDENCY}")
-		if (DEPENDENCY STREQUAL "directxtk12")
-			target_link_libraries(${NAME_EXE} PRIVATE Microsoft::DirectXTK12)
-		else()
-			target_link_libraries(${NAME_EXE} PRIVATE ${DEPENDENCY}::${DEPENDENCY})
-		endif()
-    endforeach()
+target_link_libraries(${NAME_EXE} PRIVATE
+    Microsoft::DirectXTK12
+    glm::glm
+    imgui::imgui)
 	
-	# Add the HLSL files to your project
-	foreach(shader_file IN ITEMS ${HLSL_FILES})
-		# Copy the HLSL files to the output directory for execution
-		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${shader_file} COPYONLY)
-		# Copy the shader files to the build directory
-		configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/${shader_file} COPYONLY)
-	endforeach(shader_file)
-endmacro()
+# Specify that the subcompile should use WinMain
+set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
 
-dynamic_dependencies(${VCPKG_JSON})
-#add_executable(${NAME_EXE} ${SOURCE})
-#target_link_libraries(${NAME_EXE} PRIVATE ${LIBRARY1}::${LIBRARY1})# ${LIBRARY2}::${LIBRARY2})
-#target_link_libraries(${NAME_EXE} PRIVATE Microsoft::DirectXTK12)
+#load additional files
+target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
+
+set(HLSL_FILES VertexShader.hlsl PixelShader.hlsl)
+# Add the HLSL files to your project
+foreach(shader_file IN ITEMS ${HLSL_FILES})
+	# Copy the HLSL files to the output directory for execution
+	configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${shader_file} COPYONLY)
+	# Copy the shader files to the build directory
+	configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/${shader_file} COPYONLY)
+endforeach(shader_file)
