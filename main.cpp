@@ -10,6 +10,8 @@
 #include <DirectXMath.h>
 #include <initguid.h>
 #include <imgui.h>
+#include <wrl/client.h>
+#include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "d3dx12.h"
@@ -17,16 +19,8 @@
 #include "DxException.h"
 
 using namespace DirectX;
+using Microsoft::WRL::ComPtr;
 
-// only calls release if object existst
-#define SAFE_RELEASE(p)     \
-    {                       \
-        if ((p))            \
-        {                   \
-            (p)->Release(); \
-            (p) = 0;        \
-        }                   \
-    }
 
 struct Vertex
 {
@@ -54,14 +48,14 @@ LRESULT CALLBACK WndProc(HWND hWnd,
 
 // direct3d stuff
 const int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
-ID3D12Device *device;
-IDXGISwapChain3 *swapChain;                                 // swapchain used to switch between render targets
-ID3D12CommandQueue *commandQueue;                           // container for command lists
-ID3D12DescriptorHeap *rtvDescriptorHeap;                    // a descriptor heap to hold resources like the render targets
-ID3D12Resource *renderTargets[frameBufferCount];            // number of render targets equal to buffer count
-ID3D12CommandAllocator *commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
-ID3D12GraphicsCommandList *commandList;                     // add commands, execute to render the frame
-ID3D12Fence *fence[frameBufferCount];                       // an object that is locked while our command list is being executed by the gpu
+ComPtr<ID3D12Device> device;
+ComPtr<IDXGISwapChain3> swapChain; // swapchain used to switch between render targets
+ComPtr<ID3D12CommandQueue> commandQueue;  // container for command lists
+ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap; // a descriptor heap to hold resources like the render targets
+ComPtr<ID3D12Resource> renderTargets[frameBufferCount]; // number of render targets equal to buffer count
+ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
+ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
+ComPtr<ID3D12Fence> fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu
 HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
 UINT64 fenceValue[frameBufferCount];                        // this value is incremented each frame. each fence will have its own value
 int frameIndex;                                             // current rtv we are on
@@ -95,6 +89,29 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
                    int nShowCmd)
 
 {
+    AllocConsole();
+
+    FILE* fpStdin;
+    freopen_s(&fpStdin, "CONIN$", "r", stdin);
+    std::cin.clear();
+
+    FILE* fpStdout;
+    freopen_s(&fpStdout, "CONOUT$", "w", stdout);
+    std::cout.clear();
+
+    FILE* fpStderr;
+    freopen_s(&fpStderr, "CONOUT$", "w", stderr);
+    std::cerr.clear();
+
+    std::wcin.clear();
+    std::wcout.clear();
+    std::wcerr.clear();
+    std::wclog.clear();
+
+    std::ios::sync_with_stdio(true);
+
+    SetConsoleTitle(L"Dreieck Console");
+    std::cout << "Hello World" << std::endl;
 
     //TESTING EXCEPTION WORKING - MH
      try {
@@ -347,7 +364,7 @@ bool InitD3D()
     IDXGISwapChain *tempSwapChain;
 
     dxgiFactory->CreateSwapChain(
-        commandQueue,   // the queue will be flushed once the swap chain is created
+        commandQueue.Get(),   // the queue will be flushed once the swap chain is created
         &swapChainDesc, // give it the swap chain description we created above
         &tempSwapChain  // store the created swap chain in a temp IDXGISwapChain interface
     );
@@ -391,7 +408,7 @@ bool InitD3D()
         }
 
         //"create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
-        device->CreateRenderTargetView(renderTargets[i], nullptr, rtvHandle);
+        device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
 
         // increment the rtv handle by the rtv descriptor size above
         rtvHandle.Offset(1, rtvDescriptorSize);
@@ -411,7 +428,7 @@ bool InitD3D()
     // -- Create a Command List -- //
 
     // create the command list with the first allocator
-    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex], NULL, IID_PPV_ARGS(&commandList));
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex].Get(), NULL, IID_PPV_ARGS(&commandList));
     if (FAILED(hr))
     {
         return false;
@@ -582,7 +599,7 @@ bool InitD3D()
     vertexData.SlicePitch = vBufferSize;                // also the size of our triangle vertex data
 
     // creating a command with the command list to copy the data from upload heap to default heap
-    UpdateSubresources(commandList, vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
+    UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
 
     // transition the vertex buffer data from copy destination state to vertex buffer state
     auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
@@ -590,12 +607,12 @@ bool InitD3D()
 
     // execute the command list to upload the initial assets (triangle data)
     commandList->Close();
-    ID3D12CommandList *ppCommandLists[] = {commandList};
+    ID3D12CommandList *ppCommandLists[] = {commandList.Get()};
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // increment the fence value now, otherwise the buffer might not be uploaded by the time we start drawing
     fenceValue[frameIndex]++;
-    hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
     if (FAILED(hr))
     {
         Running = false;
@@ -641,7 +658,7 @@ void UpdatePipeline()
     }
 
     // reset the command list
-    hr = commandList->Reset(commandAllocator[frameIndex], pipelineStateObject);
+    hr = commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject);
     if (FAILED(hr))
     {
         Running = false;
@@ -649,7 +666,7 @@ void UpdatePipeline()
 
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
     //  transition the "frameIndex" render target from the present state to the render target state so the command list draws to it starting from here
-    auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     commandList->ResourceBarrier(1, &resBarrierTransition);
 
     // get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline
@@ -671,7 +688,7 @@ void UpdatePipeline()
     commandList->DrawInstanced(3, 1, 0, 0);                                   // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state
-    auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commandList->ResourceBarrier(1, &resBarrierTransPresent);
 
     hr = commandList->Close();
@@ -687,7 +704,7 @@ void Render()
     UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
 
     // create an array of command lists (only one command list here)
-    ID3D12CommandList *ppCommandLists[] = {commandList};
+    ID3D12CommandList *ppCommandLists[] = {commandList.Get()};
 
     // execute the array of command lists
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
@@ -695,7 +712,7 @@ void Render()
     // this command goes in at the end of our command queue. we will know when our command queue
     // has finished because the fence value will be set to "fenceValue" from the GPU since the command
     // queue is being executed on the GPU
-    hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
     if (FAILED(hr))
     {
         Running = false;
@@ -723,22 +740,22 @@ void Cleanup()
     if (swapChain->GetFullscreenState(&fs, NULL))
         swapChain->SetFullscreenState(false, NULL);
 
-    SAFE_RELEASE(device);
-    SAFE_RELEASE(swapChain);
-    SAFE_RELEASE(commandQueue);
-    SAFE_RELEASE(rtvDescriptorHeap);
-    SAFE_RELEASE(commandList);
+    device.Reset();
+    swapChain.Reset();
+    commandQueue.Reset();
+    rtvDescriptorHeap.Reset();
+    commandList.Reset();
 
     for (int i = 0; i < frameBufferCount; ++i)
     {
-        SAFE_RELEASE(renderTargets[i]);
-        SAFE_RELEASE(commandAllocator[i]);
-        SAFE_RELEASE(fence[i]);
+        renderTargets[i].Reset();
+        commandAllocator[i].Reset();
+        fence[i].Reset();
     };
 
-    SAFE_RELEASE(pipelineStateObject);
-    SAFE_RELEASE(rootSignature);
-    SAFE_RELEASE(vertexBuffer);
+    pipelineStateObject->Release();
+    rootSignature->Release();
+    vertexBuffer->Release();
 }
 
 void WaitForPreviousFrame()
