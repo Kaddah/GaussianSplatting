@@ -16,8 +16,6 @@ set(HLSL_FILES VertexShader.hlsl PixelShader.hlsl)
 
 set(SOURCE main.cpp DxException.cpp DxException.h)
 
-ADD_EXECUTABLE(Test ${SOURCE} ${HEADERS})
-
 
 set(NAME_EXE Gaussian-Splatting)
 
