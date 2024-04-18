@@ -14,7 +14,8 @@ set_source_files_properties(PixelShader.hlsl PROPERTIES VS_SHADER_FLAGS ${HLSL_F
 # varaibles
 set(HLSL_FILES VertexShader.hlsl PixelShader.hlsl)
 
-set(SOURCE main.cpp)
+set(SOURCE main.cpp DxException.cpp DxException.h)
+
 
 set(NAME_EXE Gaussian-Splatting)
 
