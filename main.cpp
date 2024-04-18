@@ -10,6 +10,8 @@
 #include <DirectXMath.h>
 #include <initguid.h>
 #include <imgui.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx12.h>
 #include <wrl/client.h>
 #include <iostream>
 #include "vector.h"
@@ -21,6 +23,8 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
+IMGUI_CHECKVERSION();
+ImGui::CreateContext();
 
 struct Vertex
 {
@@ -792,4 +796,3 @@ void WaitForPreviousFrame()
     // increment fenceValue for next frame
     fenceValue[frameIndex]++;
 }
-
