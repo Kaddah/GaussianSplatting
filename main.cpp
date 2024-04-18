@@ -277,7 +277,7 @@ bool InitD3D()
     HRESULT hr;
 
     // -- Enable debug layer -- //
-
+    // MAIGO DID THIS
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
         debugController->EnableDebugLayer();
