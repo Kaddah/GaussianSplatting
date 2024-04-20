@@ -1,0 +1,13 @@
+Adrian Häfner
+	Timeline:
+	07.04.2024	12:00 - 21:00
+		- cmake tutorial (Youtube: https://www.youtube.com/watch?v=SJu22M74-c0&list=PLNdSza1vBfZa4mpPp2Ht92PvwXPlJ4pG2&index=1)
+		- initiall cmake at Github Project
+	
+	09.04.2024 10:00 - 12:30
+		- versuch Dreieck zu Zeichnen
+	
+	12.04.2024 14:00 - 20:00
+		- implementieren vom Dreieck (Kaddah) in cmake
+	18.04.2024 15:00 - 18:30
+		- neugestalltung vom Cmake File, automatische installation von vcpkg

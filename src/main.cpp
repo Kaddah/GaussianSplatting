@@ -1,4 +1,4 @@
-ï»¿#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -11,11 +11,11 @@
 #include <initguid.h>
 #include <imgui.h>
 #include <wrl/client.h>
+#include <glm/glm.hpp>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "d3dx12.h"
-
 #include "DxException.h"
 
 using namespace DirectX;
@@ -25,8 +25,8 @@ using Microsoft::WRL::ComPtr;
 struct Vertex
 {
     Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-    XMFLOAT3 pos;
-    XMFLOAT4 color;
+    glm::vec3 pos;
+    glm::vec4 color;
 };
 
 HWND hwnd = NULL;
@@ -38,13 +38,13 @@ bool FullScreen = false;
 bool Running = true;
 
 bool InitializeWindow(HINSTANCE hInstance,
-    int ShowWnd,
-    bool fullscreen);
+                      int ShowWnd,
+                      bool fullscreen);
 void mainloop();
 LRESULT CALLBACK WndProc(HWND hWnd,
-    UINT msg,
-    WPARAM wParam,
-    LPARAM lParam);
+                         UINT msg,
+                         WPARAM wParam,
+                         LPARAM lParam);
 
 // direct3d stuff
 const int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
@@ -68,15 +68,15 @@ void UpdatePipeline();                    // update the direct3d pipeline (updat
 void Render();                            // execute the command list
 void Cleanup();                           // release com ojects and clean up memory
 void WaitForPreviousFrame();              // wait until gpu is finished with command list
-ID3D12PipelineState* pipelineStateObject; // pso containing a pipeline state
-ID3D12RootSignature* rootSignature;       // root signature defines data shaders will access
+ID3D12PipelineState *pipelineStateObject; // pso containing a pipeline state
+ID3D12RootSignature *rootSignature;       // root signature defines data shaders will access
 D3D12_VIEWPORT viewport;                  // area that output from rasterizer will be stretched to.
 D3D12_RECT scissorRect;                   // the area to draw in. pixels outside that area will not be drawn onto
-ID3D12Resource* vertexBuffer;             // a default buffer in GPU memory that we will load vertex data for our triangle into
+ID3D12Resource *vertexBuffer;             // a default buffer in GPU memory that we will load vertex data for our triangle into
 D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
 
-// Simulierte Funktion, die HRESULT zurï¿½ckgibt
+// Simulierte Funktion, die HRESULT zurückgibt
 HRESULT SimulateDirectXFunction() {
     // Hier simulieren wir einen Fehler
     return E_FAIL;  // Simuliere einen Fehlschlag
@@ -84,9 +84,9 @@ HRESULT SimulateDirectXFunction() {
 
 // entry point
 int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
-    HINSTANCE hPrevInstance,
-    LPSTR lpCmdLine,
-    int nShowCmd)
+                   HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine,
+                   int nShowCmd)
 
 {
     AllocConsole();
@@ -114,27 +114,27 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     std::cout << "Hello World" << std::endl;
 
     //TESTING EXCEPTION WORKING - MH
-    try {
+     try {
         // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-        ThrowIfFailed(SimulateDirectXFunction());
+    ThrowIfFailed(SimulateDirectXFunction());
+        }
+        catch (const DxException& e) {
+    // Fehlermeldung in einer MessageBox anzeigen
+    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
     }
-    catch (const DxException& e) {
-        // Fehlermeldung in einer MessageBox anzeigen
-        MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
-    }
-
+    
     // create the window
     if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
     {
         MessageBox(0, L"Window Initialization - Failed",
-            L"Error", MB_OK);
+                   L"Error", MB_OK);
         return 1;
     }
     // initialize direct3d
     if (!InitD3D())
     {
         MessageBox(0, L"Failed to initialize direct3d 12",
-            L"Error", MB_OK);
+                   L"Error", MB_OK);
         Cleanup();
         return 1;
     }
@@ -151,15 +151,15 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
 }
 // create and show the window
 bool InitializeWindow(HINSTANCE hInstance,
-    int ShowWnd,
-    bool fullscreen)
+                      int ShowWnd,
+                      bool fullscreen)
 
 {
     if (fullscreen)
     {
         HMONITOR hmon = MonitorFromWindow(hwnd,
-            MONITOR_DEFAULTTONEAREST);
-        MONITORINFO mi = { sizeof(mi) };
+                                          MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = {sizeof(mi)};
         GetMonitorInfo(hmon, &mi);
 
         Width = mi.rcMonitor.right - mi.rcMonitor.left;
@@ -184,25 +184,25 @@ bool InitializeWindow(HINSTANCE hInstance,
     if (!RegisterClassEx(&wc))
     {
         MessageBox(NULL, L"Error registering class",
-            L"Error", MB_OK | MB_ICONERROR);
+                   L"Error", MB_OK | MB_ICONERROR);
         return false;
     }
 
     hwnd = CreateWindowEx(NULL,
-        WindowName,
-        WindowTitle,
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        Width, Height,
-        NULL,
-        NULL,
-        hInstance,
-        NULL);
+                          WindowName,
+                          WindowTitle,
+                          WS_OVERLAPPEDWINDOW,
+                          CW_USEDEFAULT, CW_USEDEFAULT,
+                          Width, Height,
+                          NULL,
+                          NULL,
+                          hInstance,
+                          NULL);
 
     if (!hwnd)
     {
         MessageBox(NULL, L"Error creating window",
-            L"Error", MB_OK | MB_ICONERROR);
+                   L"Error", MB_OK | MB_ICONERROR);
         return false;
     }
 
@@ -242,9 +242,9 @@ void mainloop()
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd,
-    UINT msg,
-    WPARAM wParam,
-    LPARAM lParam)
+                         UINT msg,
+                         WPARAM wParam,
+                         LPARAM lParam)
 
 {
     switch (msg)
@@ -253,7 +253,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,
         if (wParam == VK_ESCAPE)
         {
             if (MessageBox(0, L"Are you sure you want to exit?",
-                L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
+                           L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
             {
                 Running = false;
                 DestroyWindow(hwnd);
@@ -267,9 +267,9 @@ LRESULT CALLBACK WndProc(HWND hwnd,
         return 0;
     }
     return DefWindowProc(hwnd,
-        msg,
-        wParam,
-        lParam);
+                         msg,
+                         wParam,
+                         lParam);
 }
 
 bool InitD3D()
@@ -286,14 +286,14 @@ bool InitD3D()
 
     // -- Create the Device -- //
 
-    IDXGIFactory4* dxgiFactory;
+    IDXGIFactory4 *dxgiFactory;
     hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
     if (FAILED(hr))
     {
         return false;
     }
 
-    IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
+    IDXGIAdapter1 *adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 
     int adapterIndex = 0; // start looking for directx 12  compatible graphics devices starting at index 0
     bool adapterFound = false;
@@ -369,7 +369,7 @@ bool InitD3D()
     swapChainDesc.SampleDesc = sampleDesc;                       // multi-sampling description
     swapChainDesc.Windowed = !FullScreen;                        // set to true, then if in fullscreen must call SetFullScreenState with true for full screen to get uncapped fps
 
-    IDXGISwapChain* tempSwapChain;
+    IDXGISwapChain *tempSwapChain;
 
     dxgiFactory->CreateSwapChain(
         commandQueue.Get(),   // the queue will be flushed once the swap chain is created
@@ -377,7 +377,7 @@ bool InitD3D()
         &tempSwapChain  // store the created swap chain in a temp IDXGISwapChain interface
     );
 
-    swapChain = static_cast<IDXGISwapChain3*>(tempSwapChain);
+    swapChain = static_cast<IDXGISwapChain3 *>(tempSwapChain);
 
     frameIndex = swapChain->GetCurrentBackBufferIndex();
 
@@ -467,7 +467,7 @@ bool InitD3D()
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-    ID3DBlob* signature;
+    ID3DBlob *signature;
     hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
     if (FAILED(hr))
     {
@@ -482,20 +482,20 @@ bool InitD3D()
 
     // create vertex and pixel shaders
     // compile vertex shader
-    ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
-    ID3DBlob* errorBuff;    // a buffer holding the error data if any
+    ID3DBlob *vertexShader; // d3d blob for holding vertex shader bytecode
+    ID3DBlob *errorBuff;    // a buffer holding the error data if any
     hr = D3DCompileFromFile(L"VertexShader.hlsl",
-        nullptr,
-        nullptr,
-        "main",
-        "vs_5_0",
-        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-        0,
-        &vertexShader,
-        &errorBuff);
+                            nullptr,
+                            nullptr,
+                            "main",
+                            "vs_5_0",
+                            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+                            0,
+                            &vertexShader,
+                            &errorBuff);
     if (FAILED(hr))
     {
-        OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+        OutputDebugStringA((char *)errorBuff->GetBufferPointer());
         return false;
     }
 
@@ -505,19 +505,19 @@ bool InitD3D()
     vertexShaderBytecode.pShaderBytecode = vertexShader->GetBufferPointer();
 
     // compile pixel shader
-    ID3DBlob* pixelShader;
+    ID3DBlob *pixelShader;
     hr = D3DCompileFromFile(L"PixelShader.hlsl",
-        nullptr,
-        nullptr,
-        "main",
-        "ps_5_0",
-        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-        0,
-        &pixelShader,
-        &errorBuff);
+                            nullptr,
+                            nullptr,
+                            "main",
+                            "ps_5_0",
+                            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+                            0,
+                            &pixelShader,
+                            &errorBuff);
     if (FAILED(hr))
     {
-        OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+        OutputDebugStringA((char *)errorBuff->GetBufferPointer());
         return false;
     }
 
@@ -530,9 +530,9 @@ bool InitD3D()
     // The input layout is used by the Input Assembler so that it knows how to read the vertex data bound to it.
 
     D3D12_INPUT_ELEMENT_DESC inputLayout[] =
-    {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0} };
+        {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
 
     // fill out an input layout description structure
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -590,7 +590,7 @@ bool InitD3D()
     // create upload heap
     // upload heaps are used to upload data to the GPU. CPU can write to it, GPU can read from it
     // upload the vertex buffer using this heap to the default heap
-    ID3D12Resource* vBufferUploadHeap;
+    ID3D12Resource *vBufferUploadHeap;
     device->CreateCommittedResource(
         &heapPropertiesUpload,             // upload heap
         D3D12_HEAP_FLAG_NONE,              // no flags
@@ -602,7 +602,7 @@ bool InitD3D()
 
     // store vertex buffer in upload heap
     D3D12_SUBRESOURCE_DATA vertexData = {};
-    vertexData.pData = reinterpret_cast<BYTE*>(vList); // pointer to our vertex array
+    vertexData.pData = reinterpret_cast<BYTE *>(vList); // pointer to our vertex array
     vertexData.RowPitch = vBufferSize;                  // size of all our triangle vertex data
     vertexData.SlicePitch = vBufferSize;                // also the size of our triangle vertex data
 
@@ -615,7 +615,7 @@ bool InitD3D()
 
     // execute the command list to upload the initial assets (triangle data)
     commandList->Close();
-    ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
+    ID3D12CommandList *ppCommandLists[] = {commandList.Get()};
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // increment the fence value now, otherwise the buffer might not be uploaded by the time we start drawing
@@ -684,7 +684,7 @@ void UpdatePipeline()
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
     // Clear the render target by using the ClearRenderTargetView command
-    const float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    const float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
     // draw triangle
@@ -712,7 +712,7 @@ void Render()
     UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
 
     // create an array of command lists (only one command list here)
-    ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
+    ID3D12CommandList *ppCommandLists[] = {commandList.Get()};
 
     // execute the array of command lists
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
@@ -792,3 +792,4 @@ void WaitForPreviousFrame()
     // increment fenceValue for next frame
     fenceValue[frameIndex]++;
 }
+

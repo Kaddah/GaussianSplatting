@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.29)
 
 set(PKGS directxtk12 glm imgui)
 
+set(VCPKG_INSTALL_PATH "vcpkg")
+#D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake
+if (DEFINED ENV{VCPKG_PATH})
+	string(REPLACE "/scripts/buildsystems/vcpkg.cmake" "" OUTPUT_STRING "$ENV{VCPKG_PATH}")
+	set(VCPKG_INSTALL_PATH ${OUTPUT_STRING})
+	message(STATUS "Found path for vcpg repository:  ${OUTPUT_STRING}")
+endif()
 
 include(FetchContent)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
@@ -20,13 +27,13 @@ include(${_project_options_SOURCE_DIR}/Index.cmake)
 # install vcpkg dependencies: - should be called before defining project()
 run_vcpkg(
     VCPKG_URL "https://github.com/microsoft/vcpkg.git"
-    VCPKG_REV "10e052511428d6b0c7fcc63a139e8024bb146032"
+	VCPKG_DIR ${VCPKG_INSTALL_PATH}
 )
 #create project
 project(gaussian_splatting LANGUAGES CXX)
 
 #set(SOURCE main.cpp DxException.cpp)
-file(GLOB SOURCE *.cpp)
+file(GLOB SOURCE header/*.h src/*.cpp)
 set(NAME_EXE Gaussian-Splatting)
 
 
