@@ -3,10 +3,6 @@
 - Please clone the repo and follow this README.
 ```
 1. install CMake
-2. Install vcpkg
-
-#add new libraries
-
 
 # CMake
 ## Install CMake
@@ -18,40 +14,25 @@ pip install cmake
 ```
 cmake --version
 ```
-The current CMake version (3.29.0) should now be displayed on the console.
-
-In the file "CMakeList.txt" is stored that older CMake versions than v3.29.0 are not activated. 
 
 # vcpkg
-## Install vcpkg
-1. clone the repo from Github (for example next to the repo "GaussianSplatting")
-```
-git clone https://github.com/microsoft/vcpkg.git
-```
-2. navigate to the repo and execute the bootstrap-vcpkg.bat file
-```
-bootstrap-vcpkg.bat
-```
-3. test if vcpkg works
-```
-./vcpkg version
-```
-Create a system variable with the name `VCPKG_PATH` which is located on the vcpkg.cmake file in the currently installed repository.
-For example: `D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake`. (see System_Variable.png)
 
-## use vcpkg
-there is a `vcpkg.json` file in the repo where the necessary dependencies can be added to the list. In addition, these must be installed in the vcpkg repo as described on the website.
+If you want to use new imports in the C++ script, these must be included in the `vcpkg.jon` and in the `CMakeLists.txt`.
+
+In CMakeLists.txt, the new package must be inserted once in line 3: 
+```
+set(PKGS directxtk12 glm imgui)
+```
+and line 40 must also be adapted:
+```
+target_link_libraries(${NAME_EXE} PRIVATE
+    Microsoft::DirectXTK12
+    glm::glm
+    imgui::imgui)
+```
 
 Dependencies can be searched for here: https://vcpkg.io/en/packages
 
-1. navigate to the folder/repo "vcpkg" on the console
-2. install all necessary packages for the project on your computer: 			
-	!Make sure that you have to adjust your path!
-```
-.\vcpkg install @D:/MyWorspace/GaussianSplatting/requirements.txt
-```
-
-If all packages are successfully installed on your computer, the CMakeLists.txt file should find them and include them in the project when creating/compiling.
 
 # Create Visual Studio project
 
