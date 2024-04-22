@@ -4,10 +4,18 @@ set(PKGS directxtk12 glm imgui)
 
 set(VCPKG_INSTALL_PATH "vcpkg")
 #D:/MyWorspace/vcpkg/scripts/buildsystems/vcpkg.cmake
+# Finde die Position von "vcpkg" im String
+
+
 if (DEFINED ENV{VCPKG_PATH})
-	string(REPLACE "/scripts/buildsystems/vcpkg.cmake" "" OUTPUT_STRING "$ENV{VCPKG_PATH}")
-	set(VCPKG_INSTALL_PATH ${OUTPUT_STRING})
-	message(STATUS "Found path for vcpg repository:  ${OUTPUT_STRING}")
+	# Finde die Position von "vcpkg" im String
+	string(FIND "$ENV{VCPKG_PATH}" "vcpkg" INDEX)
+	if (${INDEX} GREATER -1)
+		math(EXPR substring_length "${INDEX} + 5")
+		string(SUBSTRING $ENV{VCPKG_PATH} 0 ${substring_length} SUBSTRING_PATH)
+	endif ()
+	set(VCPKG_INSTALL_PATH ${SUBSTRING_PATH})
+	message(STATUS "Found path for vcpg repository:  ${SUBSTRING_PATH}")
 endif()
 
 include(FetchContent)
