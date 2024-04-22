@@ -11,11 +11,11 @@
 #include <initguid.h>
 #include <imgui.h>
 #include <wrl/client.h>
-#include <glm/glm.hpp>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "d3dx12.h"
+
 #include "DxException.h"
 
 using namespace DirectX;
@@ -25,8 +25,8 @@ using Microsoft::WRL::ComPtr;
 struct Vertex
 {
     Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-    glm::vec3 pos;
-    glm::vec4 color;
+    XMFLOAT3 pos;
+    XMFLOAT4 color;
 };
 
 HWND hwnd = NULL;
