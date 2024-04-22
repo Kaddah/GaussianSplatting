@@ -18,6 +18,8 @@
 #include "d3dx12.h"
 #include "DxException.h"
 
+#include "DrawWindow.h"
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -32,19 +34,12 @@ struct Vertex
 HWND hwnd = NULL;
 LPCTSTR WindowName = L"Dreieck";
 LPCTSTR WindowTitle = L"Dreieck";
-int Width = 800; // of window
-int Height = 600;
-bool FullScreen = false;
-bool Running = true;
 
-bool InitializeWindow(HINSTANCE hInstance,
-                      int ShowWnd,
-                      bool fullscreen);
+bool Running = true;
+bool Fullscreen = false;
+
 void mainloop();
-LRESULT CALLBACK WndProc(HWND hWnd,
-                         UINT msg,
-                         WPARAM wParam,
-                         LPARAM lParam);
+
 
 // direct3d stuff
 const int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
@@ -123,6 +118,8 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
     }
     
+    bool windowExists = 
+
     // create the window
     if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
     {
@@ -130,6 +127,7 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
                    L"Error", MB_OK);
         return 1;
     }
+
     // initialize direct3d
     if (!InitD3D())
     {
@@ -138,6 +136,7 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
         Cleanup();
         return 1;
     }
+
     // start the main loop
     mainloop();
     // wait for gpu to finish executing the command list before we start releasing everything
@@ -148,73 +147,6 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     Cleanup();
 
     return 0;
-}
-// create and show the window
-bool InitializeWindow(HINSTANCE hInstance,
-                      int ShowWnd,
-                      bool fullscreen)
-
-{
-    if (fullscreen)
-    {
-        HMONITOR hmon = MonitorFromWindow(hwnd,
-                                          MONITOR_DEFAULTTONEAREST);
-        MONITORINFO mi = {sizeof(mi)};
-        GetMonitorInfo(hmon, &mi);
-
-        Width = mi.rcMonitor.right - mi.rcMonitor.left;
-        Height = mi.rcMonitor.bottom - mi.rcMonitor.top;
-    }
-
-    WNDCLASSEX wc;
-
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = NULL;
-    wc.cbWndExtra = NULL;
-    wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
-    wc.lpszMenuName = NULL;
-    wc.lpszClassName = WindowName;
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-
-    if (!RegisterClassEx(&wc))
-    {
-        MessageBox(NULL, L"Error registering class",
-                   L"Error", MB_OK | MB_ICONERROR);
-        return false;
-    }
-
-    hwnd = CreateWindowEx(NULL,
-                          WindowName,
-                          WindowTitle,
-                          WS_OVERLAPPEDWINDOW,
-                          CW_USEDEFAULT, CW_USEDEFAULT,
-                          Width, Height,
-                          NULL,
-                          NULL,
-                          hInstance,
-                          NULL);
-
-    if (!hwnd)
-    {
-        MessageBox(NULL, L"Error creating window",
-                   L"Error", MB_OK | MB_ICONERROR);
-        return false;
-    }
-
-    if (fullscreen)
-    {
-        SetWindowLong(hwnd, GWL_STYLE, 0);
-    }
-
-    ShowWindow(hwnd, ShowWnd);
-    UpdateWindow(hwnd);
-
-    return true;
 }
 
 void mainloop()
@@ -239,37 +171,6 @@ void mainloop()
             Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
         }
     }
-}
-
-LRESULT CALLBACK WndProc(HWND hwnd,
-                         UINT msg,
-                         WPARAM wParam,
-                         LPARAM lParam)
-
-{
-    switch (msg)
-    {
-    case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE)
-        {
-            if (MessageBox(0, L"Are you sure you want to exit?",
-                           L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
-            {
-                Running = false;
-                DestroyWindow(hwnd);
-            }
-        }
-        return 0;
-
-    case WM_DESTROY: // x button on top right corner of window was pressed
-        Running = false;
-        PostQuitMessage(0);
-        return 0;
-    }
-    return DefWindowProc(hwnd,
-                         msg,
-                         wParam,
-                         lParam);
 }
 
 bool InitD3D()
@@ -651,6 +552,7 @@ void Update()
 {
     // update app logic, such as moving the camera or figuring out what objects are in view
 }
+
 void UpdatePipeline()
 {
     HRESULT hr;
@@ -705,6 +607,7 @@ void UpdatePipeline()
         Running = false;
     }
 }
+
 void Render()
 {
     HRESULT hr;
