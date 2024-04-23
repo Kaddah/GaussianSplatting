@@ -13,11 +13,11 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx12.h>
 #include <wrl/client.h>
+#include <glm/glm.hpp>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
 #include "d3dx12.h"
-
 #include "DxException.h"
 
 using namespace DirectX;
@@ -29,8 +29,8 @@ ImGui::CreateContext();
 struct Vertex
 {
     Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-    XMFLOAT3 pos;
-    XMFLOAT4 color;
+    glm::vec3 pos;
+    glm::vec4 color;
 };
 
 HWND hwnd = NULL;
@@ -281,7 +281,7 @@ bool InitD3D()
     HRESULT hr;
 
     // -- Enable debug layer -- //
-
+    // MAIGO DID THIS
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
         debugController->EnableDebugLayer();
