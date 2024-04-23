@@ -23,8 +23,6 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-IMGUI_CHECKVERSION();
-ImGui::CreateContext();
 
 struct Vertex
 {
@@ -241,6 +239,7 @@ void mainloop()
             // run game code
             Update(); // update the game logic
             Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
+            
         }
     }
 }
