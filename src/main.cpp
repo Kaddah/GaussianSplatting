@@ -236,10 +236,23 @@ void mainloop()
         }
         else
         {
+            ImGui_ImplDX12_NewFrame();
+            ImGui_ImplWin32_NewFrame();
+            ImGui::NewFrame();
+
+            ImGui::ShowDemoWindow();
+
+            ImGui::Render();
+
+
             // run game code
             Update(); // update the game logic
             Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
             
+            ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
+            swapChain->Present(0, 0);
+
+            WaitForPreviousFrame();
         }
     }
 }
@@ -250,6 +263,9 @@ LRESULT CALLBACK WndProc(HWND hwnd,
                          LPARAM lParam)
 
 {
+    //if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+    //    return true;
+
     switch (msg)
     {
     case WM_KEYDOWN:
@@ -629,6 +645,16 @@ bool InitD3D()
         Running = false;
     }
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX12_Init(device.Get(), frameBufferCount,
+        DXGI_FORMAT_R8G8B8A8_UNORM, rtvDescriptorHeap.Get(),
+        rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+        rtvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
     vertexBufferView.StrideInBytes = sizeof(Vertex);
@@ -767,6 +793,10 @@ void Cleanup()
     pipelineStateObject->Release();
     rootSignature->Release();
     vertexBuffer->Release();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void WaitForPreviousFrame()
