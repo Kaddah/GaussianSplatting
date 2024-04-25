@@ -113,6 +113,7 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     std::string plyFilename = "../triangle-data-test.ply";
     //std::string plyFilename = "../bycicle-test.ply";
     vertices = PlyReader::readPlyFile(plyFilename);
+    //std::cout << "Filname = " << plyFilename;
 
     
     // #10 check import success - MH
