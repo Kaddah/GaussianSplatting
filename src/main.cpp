@@ -48,6 +48,12 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam);
 
+// Imgui
+LRESULT WINAPI WndProc(HWND hWnd, // device?
+                       UINT msg, // frameBufferCount?
+                       WPARAM wParam,  // 
+                       LPARAM lParam); //
+
 // direct3d stuff
 const int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 ComPtr<ID3D12Device> device;
@@ -257,15 +263,17 @@ void mainloop()
     }
 }
 
+//LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+//    	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+//		return true;
+//}
+
 LRESULT CALLBACK WndProc(HWND hwnd,
                          UINT msg,
                          WPARAM wParam,
                          LPARAM lParam)
 
 {
-    //if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-    //    return true;
-
     switch (msg)
     {
     case WM_KEYDOWN:
