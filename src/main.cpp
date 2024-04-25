@@ -81,12 +81,12 @@ D3D12_RECT scissorRect;                   // the area to draw in. pixels outside
 ID3D12Resource *vertexBuffer;             // a default buffer in GPU memory that we will load vertex data for our triangle into
 D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
-
-// Simulierte Funktion, die HRESULT zurückgibt
-HRESULT SimulateDirectXFunction() {
-    // Hier simulieren wir einen Fehler
-    return E_FAIL;  // Simuliere einen Fehlschlag
-}
+// #6 For testing macro and error handling
+// simulate function - return HRESULT err
+//HRESULT SimulateDirectXFunction() {
+//    // Hier simulieren wir einen Fehler
+//    return E_FAIL;  // Simuliere einen Fehlschlag
+//}
 
 // entry point
 int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
@@ -110,21 +110,22 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     freopen_s(&fpStderr, "CONOUT$", "w", stderr);
 
 // #10 start to import PLY file - MH
-    std::string plyFilename = "../triangle-data-test.ply";
+    std::string plyFilename = "../file.ply";
     //std::string plyFilename = "../bycicle-test.ply";
     vertices = PlyReader::readPlyFile(plyFilename);
     //std::cout << "Filname = " << plyFilename;
 
     
     // #10 check import success - MH
-    std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
-    for (size_t i = 0; i < vertices.size(); ++i) {
-        const Vertex& vertex = vertices[i];
-        std::cout << "Vertex " << i << ": " << std::endl;
-        std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
-        std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
-        std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
-    }
+    // Plott vertices for debuging
+    //std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
+    //for (size_t i = 0; i < vertices.size(); ++i) {
+    //    const Vertex& vertex = vertices[i];
+    //    std::cout << "Vertex " << i << ": " << std::endl;
+    //    std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
+    //    std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
+    //    std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
+    //}
 
     std::cerr.clear();
 
@@ -139,14 +140,14 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     std::cout << "Hello World" << std::endl;
 
     //TESTING EXCEPTION WORKING - MH
-     try {
-        // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-    ThrowIfFailed(SimulateDirectXFunction());
-        }
-        catch (const DxException& e) {
-    // Fehlermeldung in einer MessageBox anzeigen
-    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
-    }
+    // try {
+    //    // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
+    //ThrowIfFailed(SimulateDirectXFunction());
+    //    }
+    //    catch (const DxException& e) {
+    //// Fehlermeldung in einer MessageBox anzeigen
+    //MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+    //}
     
     // create the window
     if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
@@ -631,6 +632,11 @@ bool InitD3D()
     D3D12_SUBRESOURCE_DATA vertexData = {};
     //vertexData.pData = reinterpret_cast<BYTE *>(vertices); // pointer to our vertex array
     vertexData.pData = vertices.data(); // pointer to our vertex array
+
+
+    std::cout << vertices.data();
+
+
     vertexData.RowPitch = vBufferSize;                  // size of all our triangle vertex data
     vertexData.SlicePitch = vBufferSize;                // also the size of our triangle vertex data
 
@@ -712,7 +718,7 @@ void UpdatePipeline()
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
     // Clear the render target by using the ClearRenderTargetView command
-    const float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    const float clearColor[] = {0.2f, 0.2f, 0.3f, 1.0f};
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
     // draw triangle
@@ -722,7 +728,7 @@ void UpdatePipeline()
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);                 // set the vertex buffer (using the vertex buffer view)
     //#10 Problem
-    commandList->DrawInstanced(3, vertices.size() / 3, 0, 0);                 // finally draw 3 vertices (draw the triangle)
+    commandList->DrawInstanced(vertices.size(), vertices.size() / 3, 0, 0);                 // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
