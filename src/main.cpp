@@ -48,14 +48,6 @@ LRESULT CALLBACK WndProc(HWND hWnd,
                          WPARAM wParam,
                          LPARAM lParam);
 
-// Imgui
-LRESULT WINAPI WndProc(HWND hWnd, // device?
-                       UINT msg, // frameBufferCount?
-                       WPARAM wParam,  // 
-                       LPARAM lParam); //
-
-
-
 // direct3d stuff
 const int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 ComPtr<ID3D12Device> device;
@@ -275,9 +267,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,
                          WPARAM wParam,
                          LPARAM lParam)
 
-{/*
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-            return true;*/
+{
+    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+            return true;
     switch (msg)
     {
     case WM_KEYDOWN:
@@ -777,6 +770,9 @@ void Render()
 
 void Cleanup()
 {
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
     // wait for the gpu to finish all frames
     for (int i = 0; i < frameBufferCount; ++i)
     {
