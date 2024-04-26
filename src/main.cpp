@@ -654,6 +654,7 @@ bool InitD3D()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(device.Get(), frameBufferCount,
         DXGI_FORMAT_R8G8B8A8_UNORM, rtvDescriptorHeap.Get(),
