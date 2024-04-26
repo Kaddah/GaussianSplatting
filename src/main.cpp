@@ -242,13 +242,13 @@ void mainloop()
 
             ImGui::ShowDemoWindow();
 
-            ImGui::Render();
+
 
 
             // run game code
             Update(); // update the game logic
             Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
-            
+            ImGui::Render();
             ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
             swapChain->Present(0, 0);
 
