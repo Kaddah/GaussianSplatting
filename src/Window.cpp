@@ -35,16 +35,26 @@ Window::~Window()
 {
     //Cleanup
         // wait for the gpu to finish all frames
-        for (int i = 0; i < frameBufferCount; ++i)
-        {
-            frameIndex = i;
-            WaitForPreviousFrame();
-        }
-
+        
+        WaitForPreviousFrame();
         // get swapchain out of full screen before exiting
         BOOL fs = false;
         if (swapChain->GetFullscreenState(&fs, NULL))
             swapChain->SetFullscreenState(false, NULL);
+        // close the fence event
+        CloseHandle(fenceEvent);
+}
+
+CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
+{
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
+    return rtvHandle;
+}
+
+CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getDSVHandle()
+{
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    return dsvHandle;
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd,
@@ -126,7 +136,7 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
         return false;
     }
 
-    HWND hwnd = CreateWindowEx(NULL,
+     _hwnd = CreateWindowEx(NULL,
         windowName,
         windowName, //windowTitle
         WS_OVERLAPPEDWINDOW,
@@ -137,7 +147,7 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
         hInstance,
         this);
 
-    if (!hwnd)
+    if (!_hwnd)
     {
         MessageBox(NULL, L"Error creating window",
             L"Error", MB_OK | MB_ICONERROR);
@@ -146,11 +156,11 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
 
     if (fullscreen)
     {
-        SetWindowLong(hwnd, GWL_STYLE, 0);
+        SetWindowLong(_hwnd, GWL_STYLE, 0);
     }
 
-    ShowWindow(hwnd, ShowWnd);
-    UpdateWindow(hwnd);
+    ShowWindow(_hwnd, ShowWnd);
+    UpdateWindow(_hwnd);
 
     return true;
 }
@@ -287,7 +297,10 @@ bool Window::InitD3D()
     rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     // get a handle to the first descriptor in the descriptor heap (handle is like pointer)
+   // CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); //rtv?
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+    //todo: hier dsv austauschen?
 
     // Create a RTV for each buffer
     for (int i = 0; i < frameBufferCount; i++)
@@ -298,12 +311,12 @@ bool Window::InitD3D()
         {
             return false;
         }
-
+        auto dsvHandle = getDSVHandle();
         //"create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
-        device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+        device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);//rtv?
 
         // increment the rtv handle by the rtv descriptor size above
-        rtvHandle.Offset(1, rtvDescriptorSize);
+        rtvHandle.Offset(1, rtvDescriptorSize); //rtv?
     }
 
     // -- Create the Command Allocators -- //
@@ -561,6 +574,35 @@ void Window::Render()
     }
 }
 
+void Window::mainloop()
+{
+    MSG msg;
+    ZeroMemory(&msg, sizeof(MSG));
+
+    while (_running)
+    {
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT)
+            {
+                _running = false;
+                break;
+            }
+
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        if (!_running) {
+            break;
+        }
+            // run game code
+            
+        Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
+         
+    }
+}
+
 void Window::UpdatePipeline()
 {
     HRESULT hr;
@@ -573,6 +615,7 @@ void Window::UpdatePipeline()
     if (FAILED(hr))
     {
         _running = false;
+        return;
     }
 
     // reset the command list
@@ -580,6 +623,7 @@ void Window::UpdatePipeline()
     if (FAILED(hr))
     {
         _running = false;
+        return;
     }
 
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
@@ -587,23 +631,8 @@ void Window::UpdatePipeline()
     auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     commandList->ResourceBarrier(1, &resBarrierTransition);
 
-    // get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
-
-    // set the render target for the output merger stage (the output of the pipeline)
-    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-
-    // Clear the render target by using the ClearRenderTargetView command
-    const float clearColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
-    // draw triangle
-    commandList->SetGraphicsRootSignature(rootSignature);                     // set the root signature
-    commandList->RSSetViewports(1, &viewport);                                // set the viewports
-    commandList->RSSetScissorRects(1, &scissorRect);                          // set the scissor rects
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
-    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);                 // set the vertex buffer (using the vertex buffer view)
-    commandList->DrawInstanced(3, 1, 0, 0);                                   // finally draw 3 vertices (draw the triangle)
+//hier war mal das dreieck
+    draw();
 
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

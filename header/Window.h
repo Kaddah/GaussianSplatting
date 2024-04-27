@@ -4,6 +4,8 @@
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
 #include <D3Dcompiler.h>
+#include <wrl/client.h>
+#include <d3dx12.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -29,7 +31,11 @@ public:
 	void Stop();
 	void WaitForPreviousFrame();
 	void Render();
+	void mainloop();
 	~Window();
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE            getRTVHandle();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE            getDSVHandle();
 
 protected:
 	int _width;

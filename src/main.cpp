@@ -13,6 +13,7 @@
 #include "matrix.h"
 #include "DxException.h"
 #include "Window.h"
+#include "GaussianRenderer.h"
 
 
 void attachConsole() {
@@ -61,56 +62,32 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     //TESTING EXCEPTION WORKING - MH
      try {
         // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-    ThrowIfFailed(SimulateDirectXFunction());
+    //ThrowIfFailed(SimulateDirectXFunction());
         }
         catch (const DxException& e) {
     // Fehlermeldung in einer MessageBox anzeigen
     MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
     }
 
-
-       // Window window(L"Triangle",800, 600, false );
-        //catch MessageBox(0, L"Window Initialization - Failed",
-       // L"Error", MB_OK);
+        try{
+       GaussianRenderer window(L"Triangle",800, 600, false, hInstance, nShowCmd );
+       // start the main loop
+       window.mainloop();
+       // wait for gpu to finish executing the command list before we start releasing everything
+       //window.WaitForPreviousFrame();
        
-    
-    
-    // start the main loop
-    mainloop();
-    // wait for gpu to finish executing the command list before we start releasing everything
-    WaitForPreviousFrame();
-    // close the fence event
-    CloseHandle(fenceEvent);
-    // clean up everything
-
+        }
+        catch (std::exception) {
+            MessageBox(0, L"Window Initialization - Failed",
+                L"Error", MB_OK);
+        }
+       
     return 0;
 }
 // create and show the window
 //hier war mal initializeWindow
 
-void mainloop()
-{
-    MSG msg;
-    ZeroMemory(&msg, sizeof(MSG));
 
-    while (_running)
-    {
-        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            if (msg.message == WM_QUIT)
-                break;
-
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        else
-        {
-            // run game code
-            Update(); // update the game logic
-            Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
-        }
-    }
-}
 
 
 
