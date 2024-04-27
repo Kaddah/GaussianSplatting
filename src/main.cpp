@@ -17,75 +17,67 @@
 
 
 void attachConsole() {
-    AllocConsole();
+	AllocConsole();
 
-    FILE* fpStdin;
-    freopen_s(&fpStdin, "CONIN$", "r", stdin);
-    std::cin.clear();
+	FILE* fpStdin;
+	freopen_s(&fpStdin, "CONIN$", "r", stdin);
+	std::cin.clear();
 
-    FILE* fpStdout;
-    freopen_s(&fpStdout, "CONOUT$", "w", stdout);
-    std::cout.clear();
+	FILE* fpStdout;
+	freopen_s(&fpStdout, "CONOUT$", "w", stdout);
+	std::cout.clear();
 
-    FILE* fpStderr;
-    freopen_s(&fpStderr, "CONOUT$", "w", stderr);
-    std::cerr.clear();
+	FILE* fpStderr;
+	freopen_s(&fpStderr, "CONOUT$", "w", stderr);
+	std::cerr.clear();
 
-    std::wcin.clear();
-    std::wcout.clear();
-    std::wcerr.clear();
-    std::wclog.clear();
+	std::wcin.clear();
+	std::wcout.clear();
+	std::wcerr.clear();
+	std::wclog.clear();
 
-    std::ios::sync_with_stdio(true);
+	std::ios::sync_with_stdio(true);
 
-    SetConsoleTitle(L"Dreieck Console");
-    std::cout << "Hello World" << std::endl;
+	SetConsoleTitle(L"Dreieck Console");
+	std::cout << "Program start" << std::endl;
 }
-//
-
 
 // Simulierte Funktion, die HRESULT zurückgibt
 HRESULT SimulateDirectXFunction() {
-    // Hier simulieren wir einen Fehler
-    return E_FAIL;  // Simuliere einen Fehlschlag
+	// Hier simulieren wir einen Fehler
+	return E_FAIL;  // Simuliere einen Fehlschlag
 }
 
-// entry point
 //main methode
-int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
-                   HINSTANCE hPrevInstance,
-                   LPSTR lpCmdLine,
-                   int nShowCmd)
+int WINAPI WinMain(HINSTANCE hInstance,
+	HINSTANCE hPrevInstance,
+	LPSTR lpCmdLine,
+	int nShowCmd)
 
 {
-    attachConsole();
-    //TESTING EXCEPTION WORKING - MH
-     try {
-        // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-    //ThrowIfFailed(SimulateDirectXFunction());
-        }
-        catch (const DxException& e) {
-    // Fehlermeldung in einer MessageBox anzeigen
-    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
-    }
+	attachConsole();
+	//TESTING EXCEPTION WORKING - MH
+	try {
+		// Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
+	//ThrowIfFailed(SimulateDirectXFunction());
+	}
+	catch (const DxException& e) {
+		// Fehlermeldung in einer MessageBox anzeigen
+		MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+	}
 
-        try{
-       GaussianRenderer window(L"Triangle",800, 600, false, hInstance, nShowCmd );
-       // start the main loop
-       window.mainloop();
-       // wait for gpu to finish executing the command list before we start releasing everything
-       //window.WaitForPreviousFrame();
-       
-        }
-        catch (std::exception) {
-            MessageBox(0, L"Window Initialization - Failed",
-                L"Error", MB_OK);
-        }
-       
-    return 0;
+	try {
+		GaussianRenderer window(L"Triangle", 800, 600, false, hInstance, nShowCmd);
+		// start the main loop
+		window.mainloop();
+	}
+	catch (std::exception) {
+		MessageBox(0, L"Window Initialization - Failed",
+			L"Error", MB_OK);
+	}
+
+	return 0;
 }
-// create and show the window
-//hier war mal initializeWindow
 
 
 

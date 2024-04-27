@@ -35,13 +35,11 @@ Window::~Window()
 {
     //Cleanup
         // wait for the gpu to finish all frames
-        
         WaitForPreviousFrame();
         // get swapchain out of full screen before exiting
         BOOL fs = false;
         if (swapChain->GetFullscreenState(&fs, NULL))
             swapChain->SetFullscreenState(false, NULL);
-        // close the fence event
         CloseHandle(fenceEvent);
 }
 
@@ -49,12 +47,6 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 {
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
     return rtvHandle;
-}
-
-CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getDSVHandle()
-{
-    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-    return dsvHandle;
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd,
@@ -170,16 +162,14 @@ bool Window::InitD3D()
 {
     HRESULT hr;
 
-    // -- Enable debug layer -- //
-    // MAIGO DID THIS
+    //Enable Debug Layer
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
         debugController->EnableDebugLayer();
         std::cout << "Debug layer ENABLED" << std::endl;
     }
 
-    // -- Create the Device -- //
-
+    //Create Device
     IDXGIFactory4* dxgiFactory;
     hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
     if (FAILED(hr))
@@ -187,9 +177,9 @@ bool Window::InitD3D()
         return false;
     }
 
-    IDXGIAdapter1* adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
+    IDXGIAdapter1* adapter; //adapter = graphics card
 
-    int adapterIndex = 0; // start looking for directx 12  compatible graphics devices starting at index 0
+    int adapterIndex = 0; 
     bool adapterFound = false;
 
     // find first hardware gpu that supports d3d 12
@@ -200,7 +190,6 @@ bool Window::InitD3D()
 
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         {
-            // we dont want a software device
             continue;
         }
 
@@ -220,7 +209,7 @@ bool Window::InitD3D()
         return false;
     }
 
-    // Create the device
+    // Create device
     hr = D3D12CreateDevice(
         adapter,
         D3D_FEATURE_LEVEL_11_0,
@@ -230,11 +219,10 @@ bool Window::InitD3D()
         return false;
     }
 
-    // -- Create a direct command queue -- //
-
+    //Create a direct command queue
     D3D12_COMMAND_QUEUE_DESC cqDesc = {};
     cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
+    cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; 
 
     hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
     if (FAILED(hr))
@@ -242,12 +230,11 @@ bool Window::InitD3D()
         return false;
     }
 
-    // -- Create the Swap Chain (double/tripple buffering) -- //
-
-    DXGI_MODE_DESC backBufferDesc = {};                 // describe display mode
-    backBufferDesc.Width = _width;                       // buffer width
-    backBufferDesc.Height = _height;                     // buffer height
-    backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the buffer (rgba 32 bits, 8 bits for each chanel)
+    //Create the Swap Chain (double/tripple buffering)
+    DXGI_MODE_DESC backBufferDesc = {};                 
+    backBufferDesc.Width = _width;                       
+    backBufferDesc.Height = _height;                     
+    backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; 
 
     // multisampling -> no multisampling -> value = 1
     DXGI_SAMPLE_DESC sampleDesc = {};
@@ -255,32 +242,31 @@ bool Window::InitD3D()
 
     // Describe and create the swap chain.
     DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-    swapChainDesc.BufferCount = frameBufferCount;                // number of buffers
-    swapChainDesc.BufferDesc = backBufferDesc;                   // back buffer description
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // this says the pipeline will render to this swap chain
+    swapChainDesc.BufferCount = frameBufferCount;                
+    swapChainDesc.BufferDesc = backBufferDesc;                   
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; //pipeline will render to this swap chain
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;    // dxgi will discard the buffer (data) after call present
-    swapChainDesc.OutputWindow = _hwnd;                           // handle to window
-    swapChainDesc.SampleDesc = sampleDesc;                       // multi-sampling description
-    swapChainDesc.Windowed = !_fullScreen;                        // set to true, then if in fullscreen must call SetFullScreenState with true for full screen to get uncapped fps
+    swapChainDesc.OutputWindow = _hwnd;                          
+    swapChainDesc.SampleDesc = sampleDesc;                       
+    swapChainDesc.Windowed = !_fullScreen;                        
 
     IDXGISwapChain* tempSwapChain;
 
     dxgiFactory->CreateSwapChain(
-        commandQueue.Get(),   // the queue will be flushed once the swap chain is created
-        &swapChainDesc, // give it the swap chain description we created above
-        &tempSwapChain  // store the created swap chain in a temp IDXGISwapChain interface
+        commandQueue.Get(),   
+        &swapChainDesc, 
+        &tempSwapChain 
     );
 
     swapChain = static_cast<IDXGISwapChain3*>(tempSwapChain);
 
     frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-    // -- Create the Back Buffers (render target views) Descriptor Heap -- //
-
+    //Create the Back Buffers (render target views) Descriptor Heap 
     // describe an rtv descriptor heap and create
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = frameBufferCount;     // number of descriptors for this heap
-    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; // this heap is a render target view heap
+    rtvHeapDesc.NumDescriptors = frameBufferCount;     
+    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; 
 
     // This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from the pipeline
     // otherwise set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
@@ -291,16 +277,11 @@ bool Window::InitD3D()
         return false;
     }
 
-    // get the size of a descriptor in this heap (this is a rtv heap, so only rtv descriptors should be stored in it.
-    // descriptor sizes may vary from device to device, which is why there is no set size and we must ask the
-    // device to give us the size. we will use this size to increment a descriptor handle offset
+    // get the size of a descriptor in this heap
     rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     // get a handle to the first descriptor in the descriptor heap (handle is like pointer)
-   // CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); //rtv?
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-    //todo: hier dsv austauschen?
 
     // Create a RTV for each buffer
     for (int i = 0; i < frameBufferCount; i++)
@@ -311,16 +292,15 @@ bool Window::InitD3D()
         {
             return false;
         }
-        auto dsvHandle = getDSVHandle();
+
         //"create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
-        device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);//rtv?
+        device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
 
         // increment the rtv handle by the rtv descriptor size above
-        rtvHandle.Offset(1, rtvDescriptorSize); //rtv?
+        rtvHandle.Offset(1, rtvDescriptorSize); 
     }
 
-    // -- Create the Command Allocators -- //
-
+    //Create the Command Allocators
     for (int i = 0; i < frameBufferCount; i++)
     {
         hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i]));
@@ -329,17 +309,13 @@ bool Window::InitD3D()
             return false;
         }
     }
-
-    // -- Create a Command List -- //
-
+ 
     // create the command list with the first allocator
     hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex].Get(), NULL, IID_PPV_ARGS(&commandList));
     if (FAILED(hr))
     {
         return false;
     }
-
-    // -- Create a Fence & Fence Event -- //
 
     // create the fences
     for (int i = 0; i < frameBufferCount; i++)
@@ -360,7 +336,6 @@ bool Window::InitD3D()
     }
 
     // create root signature
-
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -396,7 +371,7 @@ bool Window::InitD3D()
         return false;
     }
 
-    // fill out a shader bytecode structure, which is basically just a pointer to the shader bytecode and the size of the shader bytecode
+    // fill out a shader bytecode structure (which is basically just a pointer to the shader bytecode and the size of the shader bytecode)
     D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
     vertexShaderBytecode.BytecodeLength = vertexShader->GetBufferSize();
     vertexShaderBytecode.pShaderBytecode = vertexShader->GetBufferPointer();
@@ -424,8 +399,6 @@ bool Window::InitD3D()
     pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
 
     // create input layout
-    // The input layout is used by the Input Assembler so that it knows how to read the vertex data bound to it.
-
     D3D12_INPUT_ELEMENT_DESC inputLayout[] =
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -438,18 +411,18 @@ bool Window::InitD3D()
     inputLayoutDesc.pInputElementDescs = inputLayout;
 
     // create a pipeline state object (PSO)
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};                        // structure to define a pso
-    psoDesc.InputLayout = inputLayoutDesc;                                  // the structure describing our input layout
-    psoDesc.pRootSignature = rootSignature;                                 // the root signature that describes the input data this pso needs
-    psoDesc.VS = vertexShaderBytecode;                                      // structure describing where to find the vertex shader bytecode and how large it is
-    psoDesc.PS = pixelShaderBytecode;                                       // same as VS but for pixel shader
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};                        
+    psoDesc.InputLayout = inputLayoutDesc;                                  
+    psoDesc.pRootSignature = rootSignature;                                 
+    psoDesc.VS = vertexShaderBytecode;                                      
+    psoDesc.PS = pixelShaderBytecode;                                       
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // type of topology we are drawing
     psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;                     // format of the render target
     psoDesc.SampleDesc = sampleDesc;                                        // must be the same sample description as the swapchain and depth/stencil buffer
     psoDesc.SampleMask = 0xffffffff;                                        // sample mask has to do with multi-sampling. 0xffffffff means point sampling is done
-    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);       // a default rasterizer state.
-    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);                 // a default blent state.
-    psoDesc.NumRenderTargets = 1;                                           // only binding one render target
+    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);       
+    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);                 
+    psoDesc.NumRenderTargets = 1;                                           
 
     // create the pso
     hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
@@ -459,8 +432,6 @@ bool Window::InitD3D()
     }
 
     // Create vertex buffer
-
-    // triangle
     Vertex vList[] = {
         {0.0f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f},
         {0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f},
@@ -474,25 +445,22 @@ bool Window::InitD3D()
     auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
     // create default heap
-    // default heap is memory on the GPU. Only the GPU has access to this memory
     device->CreateCommittedResource(
-        &heapPropertiesDefault,         // a default heap
-        D3D12_HEAP_FLAG_NONE,           // no flags
-        &resourceDesc,                  // resource description for a buffer
-        D3D12_RESOURCE_STATE_COPY_DEST, // start this heap in the copy destination state since we will copy data from the upload heap to this heap
-        nullptr,                        // optimized clear value must be null for this type of resource. used for render targets and depth/stencil buffers
+        &heapPropertiesDefault,         
+        D3D12_HEAP_FLAG_NONE,           
+        &resourceDesc,                  
+        D3D12_RESOURCE_STATE_COPY_DEST, 
+        nullptr,                        
         IID_PPV_ARGS(&vertexBuffer));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
     // create upload heap
-    // upload heaps are used to upload data to the GPU. CPU can write to it, GPU can read from it
-    // upload the vertex buffer using this heap to the default heap
     ID3D12Resource* vBufferUploadHeap;
     device->CreateCommittedResource(
-        &heapPropertiesUpload,             // upload heap
-        D3D12_HEAP_FLAG_NONE,              // no flags
-        &resourceDesc,                     // resource description for a buffer
-        D3D12_RESOURCE_STATE_GENERIC_READ, // GPU will read from this buffer and copy its contents to the default heap
+        &heapPropertiesUpload,             
+        D3D12_HEAP_FLAG_NONE,              
+        &resourceDesc,                     
+        D3D12_RESOURCE_STATE_GENERIC_READ, 
         nullptr,
         IID_PPV_ARGS(&vBufferUploadHeap));
     vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
@@ -557,9 +525,6 @@ void Window::Render()
     // execute the array of command lists
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    // this command goes in at the end of our command queue. we will know when our command queue
-    // has finished because the fence value will be set to "fenceValue" from the GPU since the command
-    // queue is being executed on the GPU
     hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
     if (FAILED(hr))
     {
@@ -596,9 +561,8 @@ void Window::mainloop()
         if (!_running) {
             break;
         }
-            // run game code
             
-        Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
+        Render(); // execute the command queue
          
     }
 }
@@ -631,7 +595,6 @@ void Window::UpdatePipeline()
     auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     commandList->ResourceBarrier(1, &resBarrierTransition);
 
-//hier war mal das dreieck
     draw();
 
     // transition the "frameIndex" render target from the render target state to the present state

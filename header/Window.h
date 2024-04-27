@@ -35,7 +35,6 @@ public:
 	~Window();
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE            getRTVHandle();
-	CD3DX12_CPU_DESCRIPTOR_HANDLE            getDSVHandle();
 
 protected:
 	int _width;
