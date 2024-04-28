@@ -20,6 +20,7 @@
 
 #include "Vertex.h"
 #include "PlyReader.h"
+#include "GeoGenerator.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -41,6 +42,11 @@ bool FullScreen = false;
 bool Running = true;
 
 std::vector<Vertex> vertices;
+std::vector<Vertex> quadVertices;
+std::vector<uint32_t> quadIndices;
+//#12 Create Quad generator parameters - MH 
+GeoGenerator quadGen;
+float quadSize = 0.9f;
 
 
 bool InitializeWindow(HINSTANCE hInstance,
@@ -83,10 +89,10 @@ D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
 // #6 For testing macro and error handling
 // simulate function - return HRESULT err
-//HRESULT SimulateDirectXFunction() {
+HRESULT SimulateDirectXFunction() {
 //    // Hier simulieren wir einen Fehler
-//    return E_FAIL;  // Simuliere einen Fehlschlag
-//}
+    return E_FAIL;  // Simuliere einen Fehlschlag
+}
 
 // entry point
 int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
@@ -110,22 +116,72 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     freopen_s(&fpStderr, "CONOUT$", "w", stderr);
 
 // #10 start to import PLY file - MH
-    std::string plyFilename = "../file.ply";
+    std::string plyFilename = "../triangle-data-test.ply";
     //std::string plyFilename = "../bycicle-test.ply";
     vertices = PlyReader::readPlyFile(plyFilename);
     //std::cout << "Filname = " << plyFilename;
 
-    
+
+ 
     // #10 check import success - MH
     // Plott vertices for debuging
-    //std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
-    //for (size_t i = 0; i < vertices.size(); ++i) {
-    //    const Vertex& vertex = vertices[i];
-    //    std::cout << "Vertex " << i << ": " << std::endl;
-    //    std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
-    //    std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
-    //    std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
-    //}
+  /*  std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        const Vertex& vertex = vertices[i];
+        std::cout << "Vertex " << i << ": " << std::endl;
+        std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
+        std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
+        std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
+    }*/
+
+    //#12 Generate quad cloud mesh - MH
+    std::vector <GeoGenerator::MeshData> quads = quadGen.GenerateQuadsForVertices(vertices, quadSize);
+    
+    //#12 Check if quads are calculated correctly - MH
+   /* for (size_t i = 0; i < quads.size(); ++i) {
+        std::cout << "Quads for Vertex " << i << ":" << std::endl;
+        const auto& meshData = quads[i];
+        for (size_t j = 0; j < meshData.vertices.size(); ++j) {
+            const Vertex& quadVertex = meshData.vertices[j];
+            std::cout << "  Quad Vertex " << j << ": " << std::endl;
+            std::cout << "    Position: (" << quadVertex.pos.x << ", " << quadVertex.pos.y << ", " << quadVertex.pos.z << ")" << std::endl;
+            std::cout << "    Normal: (" << quadVertex.normal.x << ", " << quadVertex.normal.y << ", " << quadVertex.normal.z << ")" << std::endl;
+            std::cout << "    Color: (" << static_cast<int>(quadVertex.color.r) << ", " << static_cast<int>(quadVertex.color.g) << ", " << static_cast<int>(quadVertex.color.b) << ")" << std::endl;
+        }
+    }*/
+
+    
+
+    uint32_t currentIndexOffset = 0;
+    for (const auto& quad : quads) {
+        quadVertices.insert(quadVertices.end(), quad.vertices.begin(), quad.vertices.end());
+        for (auto index : quad.indices) {
+            quadIndices.push_back(index + currentIndexOffset);
+        }
+        currentIndexOffset += quad.vertices.size(); // Update offset for next quad
+    }
+    
+
+    std::cout << "Quad Vertices: \n";
+    for (size_t i = 0; i < quadVertices.size(); ++i) {
+        const Vertex& v = quadVertices[i];
+        std::cout << "Vertex " << i << ":\n"
+            << "  Position: (" << v.pos.x << ", " << v.pos.y << ", " << v.pos.z << ")\n"
+            << "  Normal: (" << v.normal.x << ", " << v.normal.y << ", " << v.normal.z << ")\n"
+            << "  Color: (" << static_cast<int>(v.color.r) << ", "
+            << static_cast<int>(v.color.g) << ", "
+            << static_cast<int>(v.color.b) << ")\n";
+    }
+
+    std::cout << "Quad Indices: \n";
+    for (size_t i = 0; i < quadIndices.size(); ++i) {
+        std::cout << quadIndices[i];
+        if ((i + 1) % 3 == 0) // Assuming triangles, print a newline every three indices
+            std::cout << "\n";
+        else
+            std::cout << ", ";
+    }
+
 
     std::cerr.clear();
 
@@ -140,14 +196,14 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     std::cout << "Hello World" << std::endl;
 
     //TESTING EXCEPTION WORKING - MH
-    // try {
+     try {
     //    // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-    //ThrowIfFailed(SimulateDirectXFunction());
-    //    }
-    //    catch (const DxException& e) {
-    //// Fehlermeldung in einer MessageBox anzeigen
-    //MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
-    //}
+    ThrowIfFailed(SimulateDirectXFunction());
+        }
+        catch (const DxException& e) {
+    // Fehlermeldung in einer MessageBox anzeigen
+    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+    }
     
     // create the window
     if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
@@ -353,14 +409,7 @@ bool InitD3D()
     }
 
     // Create the device
-    hr = D3D12CreateDevice(
-        adapter,
-        D3D_FEATURE_LEVEL_11_0,
-        IID_PPV_ARGS(&device));
-    if (FAILED(hr))
-    {
-        return false;
-    }
+    ThrowIfFailed(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
 
     // -- Create a direct command queue -- //
 
@@ -417,11 +466,9 @@ bool InitD3D()
     // This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from the pipeline
     // otherwise set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
-    if (FAILED(hr))
-    {
-        return false;
-    }
+
+    ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap)));
+
 
     // get the size of a descriptor in this heap (this is a rtv heap, so only rtv descriptors should be stored in it.
     // descriptor sizes may vary from device to device, which is why there is no set size and we must ask the
@@ -452,21 +499,13 @@ bool InitD3D()
 
     for (int i = 0; i < frameBufferCount; i++)
     {
-        hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i]));
-        if (FAILED(hr))
-        {
-            return false;
-        }
+        ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i])));
     }
 
     // -- Create a Command List -- //
 
     // create the command list with the first allocator
-    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex].Get(), NULL, IID_PPV_ARGS(&commandList));
-    if (FAILED(hr))
-    {
-        return false;
-    }
+    ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex].Get(), NULL, IID_PPV_ARGS(&commandList)));
 
     // -- Create a Fence & Fence Event -- //
 
@@ -494,17 +533,8 @@ bool InitD3D()
     rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     ID3DBlob *signature;
-    hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
-    if (FAILED(hr))
-    {
-        return false;
-    }
+    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr));
+    ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
 
     // create vertex and pixel shaders
     // compile vertex shader
@@ -581,22 +611,9 @@ bool InitD3D()
     psoDesc.NumRenderTargets = 1;                                           // only binding one render target
 
     // create the pso
-    hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
-    if (FAILED(hr))
-    {
-        return false;
-    }
-
-    // Create vertex buffer
-
-    //#10 Triangle cords obsolet while running ply parser- MH
-    /*Vertex vList[] = {
-      {glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-    {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}
-    };*/
-
-    int vBufferSize = sizeof(Vertex) * vertices.size();
+    ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
+ 
+    int vBufferSize = sizeof(Vertex) * quadVertices.size();
     std::cout << "Buffersize = " << vBufferSize;
 
     auto heapPropertiesDefault = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -631,10 +648,10 @@ bool InitD3D()
     // store vertex buffer in upload heap
     D3D12_SUBRESOURCE_DATA vertexData = {};
     //vertexData.pData = reinterpret_cast<BYTE *>(vertices); // pointer to our vertex array
-    vertexData.pData = vertices.data(); // pointer to our vertex array
+    vertexData.pData = quadVertices.data(); // pointer to our vertex array
 
 
-    std::cout << vertices.data();
+    std::cout << quadVertices.data();
 
 
     vertexData.RowPitch = vBufferSize;                  // size of all our triangle vertex data
@@ -654,11 +671,7 @@ bool InitD3D()
 
     // increment the fence value now, otherwise the buffer might not be uploaded by the time we start drawing
     fenceValue[frameIndex]++;
-    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-    if (FAILED(hr))
-    {
-        Running = false;
-    }
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
@@ -693,18 +706,10 @@ void UpdatePipeline()
     WaitForPreviousFrame();
 
     // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list was stored in
-    hr = commandAllocator[frameIndex]->Reset();
-    if (FAILED(hr))
-    {
-        Running = false;
-    }
+    ThrowIfFailed(commandAllocator[frameIndex]->Reset());
 
     // reset the command list
-    hr = commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject);
-    if (FAILED(hr))
-    {
-        Running = false;
-    }
+    ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
     //  transition the "frameIndex" render target from the present state to the render target state so the command list draws to it starting from here
@@ -728,17 +733,13 @@ void UpdatePipeline()
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);                 // set the vertex buffer (using the vertex buffer view)
     //#10 Problem
-    commandList->DrawInstanced(vertices.size(), vertices.size() / 3, 0, 0);                 // finally draw 3 vertices (draw the triangle)
+    commandList->DrawInstanced(quadVertices.size(), quadVertices.size() / 3, 0, 0);                 // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commandList->ResourceBarrier(1, &resBarrierTransPresent);
 
-    hr = commandList->Close();
-    if (FAILED(hr))
-    {
-        Running = false;
-    }
+    ThrowIfFailed(commandList->Close());
 }
 void Render()
 {
