@@ -24,20 +24,17 @@ GeoGenerator::MeshData GeoGenerator::CreateQuad(const Vertex& baseVertex, float 
     glm::vec3 p2 = baseVertex.pos + glm::vec3(halfSize, halfSize, 0);
     glm::vec3 p3 = baseVertex.pos + glm::vec3(-halfSize, halfSize, 0);
 
+    // First triangle (p0, p1, p2)
     meshData.vertices.push_back(Vertex{ p0, baseVertex.normal, baseVertex.color });
     meshData.vertices.push_back(Vertex{ p1, baseVertex.normal, baseVertex.color });
     meshData.vertices.push_back(Vertex{ p2, baseVertex.normal, baseVertex.color });
+
+    // Second triangle (p2, p3, p0)
+    meshData.vertices.push_back(Vertex{ p2, baseVertex.normal, baseVertex.color });
     meshData.vertices.push_back(Vertex{ p3, baseVertex.normal, baseVertex.color });
+    meshData.vertices.push_back(Vertex{ p0, baseVertex.normal, baseVertex.color });
 
-    // Create two triangles from vertices
-    uint32 baseIndex = static_cast<uint32>(meshData.vertices.size() - 4);
-    meshData.indices.push_back(baseIndex);
-    meshData.indices.push_back(baseIndex + 1);
-    meshData.indices.push_back(baseIndex + 2);
-    meshData.indices.push_back(baseIndex);
-    meshData.indices.push_back(baseIndex + 2);
-    meshData.indices.push_back(baseIndex + 3);
-
+    // No indices are needed as we're now using direct vertex order for rendering
     return meshData;
 }
 

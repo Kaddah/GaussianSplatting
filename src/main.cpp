@@ -46,7 +46,8 @@ std::vector<Vertex> quadVertices;
 std::vector<uint32_t> quadIndices;
 //#12 Create Quad generator parameters - MH 
 GeoGenerator quadGen;
-float quadSize = 0.9f;
+std::vector<Vertex> quads;
+float quadSize = 0.1f;
 
 
 bool InitializeWindow(HINSTANCE hInstance,
@@ -116,10 +117,10 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     freopen_s(&fpStderr, "CONOUT$", "w", stderr);
 
 // #10 start to import PLY file - MH
-    std::string plyFilename = "../triangle-data-test.ply";
+    //std::string plyFilename = "../triangle-data-test.ply";
     //std::string plyFilename = "../bycicle-test.ply";
+    std::string plyFilename = "../file.ply";
     vertices = PlyReader::readPlyFile(plyFilename);
-    //std::cout << "Filname = " << plyFilename;
 
 
  
@@ -162,25 +163,29 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     }
     
 
-    std::cout << "Quad Vertices: \n";
-    for (size_t i = 0; i < quadVertices.size(); ++i) {
-        const Vertex& v = quadVertices[i];
-        std::cout << "Vertex " << i << ":\n"
-            << "  Position: (" << v.pos.x << ", " << v.pos.y << ", " << v.pos.z << ")\n"
-            << "  Normal: (" << v.normal.x << ", " << v.normal.y << ", " << v.normal.z << ")\n"
-            << "  Color: (" << static_cast<int>(v.color.r) << ", "
-            << static_cast<int>(v.color.g) << ", "
-            << static_cast<int>(v.color.b) << ")\n";
-    }
+    //std::cout << "Quad Vertices: \n";
+    //for (size_t i = 0; i < quadVertices.size(); ++i) {
+    //    const Vertex& v = quadVertices[i];
+    //    std::cout << "Vertex " << i << ":\n"
+    //        << "  Position: (" << v.pos.x << ", " << v.pos.y << ", " << v.pos.z << ")\n"
+    //        << "  Normal: (" << v.normal.x << ", " << v.normal.y << ", " << v.normal.z << ")\n"
+    //        << "  Color: (" << static_cast<int>(v.color.r) << ", "
+    //        << static_cast<int>(v.color.g) << ", "
+    //        << static_cast<int>(v.color.b) << ")\n";
+    //}
 
-    std::cout << "Quad Indices: \n";
-    for (size_t i = 0; i < quadIndices.size(); ++i) {
-        std::cout << quadIndices[i];
-        if ((i + 1) % 3 == 0) // Assuming triangles, print a newline every three indices
-            std::cout << "\n";
-        else
-            std::cout << ", ";
-    }
+  /*  std::cout << "Quad Vertices:\n" << quadVertices.data();*/
+
+
+
+    //std::cout << "Quad Indices: \n";
+    //for (size_t i = 0; i < quadIndices.size(); ++i) {
+    //    std::cout << quadIndices[i];
+    //    if ((i + 1) % 3 == 0) // Assuming triangles, print a newline every three indices
+    //        std::cout << "\n";
+    //    else
+    //        std::cout << ", ";
+    //}
 
 
     std::cerr.clear();
@@ -196,14 +201,14 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
     std::cout << "Hello World" << std::endl;
 
     //TESTING EXCEPTION WORKING - MH
-     try {
+     //try {
     //    // Testen der DirectX-Funktion mit dem ThrowIfFailed Makro
-    ThrowIfFailed(SimulateDirectXFunction());
-        }
-        catch (const DxException& e) {
+    //ThrowIfFailed(SimulateDirectXFunction());
+        //}
+        //catch (const DxException& e) {
     // Fehlermeldung in einer MessageBox anzeigen
-    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
-    }
+    //MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+    //}
     
     // create the window
     if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
@@ -369,11 +374,7 @@ bool InitD3D()
     // -- Create the Device -- //
 
     IDXGIFactory4 *dxgiFactory;
-    hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
-    if (FAILED(hr))
-    {
-        return false;
-    }
+    ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
 
     IDXGIAdapter1 *adapter; // adapters are the graphics card (this includes the embedded graphics on the motherboard)
 
@@ -417,11 +418,8 @@ bool InitD3D()
     cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
 
-    hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
-    if (FAILED(hr))
-    {
-        return false;
-    }
+    ThrowIfFailed(device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue))); // create the command queue
+   
 
     // -- Create the Swap Chain (double/tripple buffering) -- //
 
@@ -482,11 +480,8 @@ bool InitD3D()
     for (int i = 0; i < frameBufferCount; i++)
     {
         // get the n'th buffer in the swap chain and store it in the n'th position of our ID3D12Resource array
-        hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i]));
-        if (FAILED(hr))
-        {
-            return false;
-        }
+        ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+        
 
         //"create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
         device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
@@ -540,20 +535,8 @@ bool InitD3D()
     // compile vertex shader
     ID3DBlob *vertexShader; // d3d blob for holding vertex shader bytecode
     ID3DBlob *errorBuff;    // a buffer holding the error data if any
-    hr = D3DCompileFromFile(L"VertexShader.hlsl",
-                            nullptr,
-                            nullptr,
-                            "main",
-                            "vs_5_0",
-                            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-                            0,
-                            &vertexShader,
-                            &errorBuff);
-    if (FAILED(hr))
-    {
-        OutputDebugStringA((char *)errorBuff->GetBufferPointer());
-        return false;
-    }
+    ThrowIfFailed(D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vertexShader, &errorBuff));
+ 
 
     // fill out a shader bytecode structure, which is basically just a pointer to the shader bytecode and the size of the shader bytecode
     D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
@@ -562,20 +545,8 @@ bool InitD3D()
 
     // compile pixel shader
     ID3DBlob *pixelShader;
-    hr = D3DCompileFromFile(L"PixelShader.hlsl",
-                            nullptr,
-                            nullptr,
-                            "main",
-                            "ps_5_0",
-                            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-                            0,
-                            &pixelShader,
-                            &errorBuff);
-    if (FAILED(hr))
-    {
-        OutputDebugStringA((char *)errorBuff->GetBufferPointer());
-        return false;
-    }
+    ThrowIfFailed(D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));;
+
 
     // fill out shader bytecode structure for pixel shader
     D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
@@ -585,10 +556,16 @@ bool InitD3D()
     // create input layout
     // The input layout is used by the Input Assembler so that it knows how to read the vertex data bound to it.
 
-    D3D12_INPUT_ELEMENT_DESC inputLayout[] =
-        {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+    //D3D12_INPUT_ELEMENT_DESC inputLayout[] =
+    //    {
+    //        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    //        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+
+
+    D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex, color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }};
 
     // fill out an input layout description structure
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -647,18 +624,18 @@ bool InitD3D()
 
     // store vertex buffer in upload heap
     D3D12_SUBRESOURCE_DATA vertexData = {};
-    //vertexData.pData = reinterpret_cast<BYTE *>(vertices); // pointer to our vertex array
+    //vertexData.pData = reinterpret_cast<const void*>(quadVertices.data()); // pointer to our vertex array
+   
     vertexData.pData = quadVertices.data(); // pointer to our vertex array
-
-
-    std::cout << quadVertices.data();
-
+    
 
     vertexData.RowPitch = vBufferSize;                  // size of all our triangle vertex data
     vertexData.SlicePitch = vBufferSize;                // also the size of our triangle vertex data
 
     // creating a command with the command list to copy the data from upload heap to default heap
     UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
+
+    std::cout << &vertexData;
 
     // transition the vertex buffer data from copy destination state to vertex buffer state
     auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
@@ -723,7 +700,7 @@ void UpdatePipeline()
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
     // Clear the render target by using the ClearRenderTargetView command
-    const float clearColor[] = {0.2f, 0.2f, 0.3f, 1.0f};
+    const float clearColor[] = {0.1f, 0.1f, 0.3f, 1.0f};
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
     // draw triangle
@@ -732,8 +709,7 @@ void UpdatePipeline()
     commandList->RSSetScissorRects(1, &scissorRect);                          // set the scissor rects
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);                 // set the vertex buffer (using the vertex buffer view)
-    //#10 Problem
-    commandList->DrawInstanced(quadVertices.size(), quadVertices.size() / 3, 0, 0);                 // finally draw 3 vertices (draw the triangle)
+    commandList->DrawInstanced(quadVertices.size(), 1, 0, 0);                 // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
