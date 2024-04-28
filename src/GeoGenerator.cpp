@@ -16,7 +16,7 @@ std::vector<GeoGenerator::uint16> GeoGenerator::MeshData::GetIndices16() const {
 // Create a quad around a given vertex
 GeoGenerator::MeshData GeoGenerator::CreateQuad(const Vertex& baseVertex, float size) {
     MeshData meshData;
-    float halfSize = size / 2.0f;
+    float halfSize = size / 8.0f;
 
     // Calculate the quad vertices around the base vertex position
     glm::vec3 p0 = baseVertex.pos + glm::vec3(-halfSize, -halfSize, 0);
