@@ -72,8 +72,11 @@ ComPtr<ID3D12Resource> renderTargets[frameBufferCount]; // number of render targ
 ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
 ComPtr<ID3D12Fence> fence[frameBufferCount]; // an object that is locked while our command list is being executed by the gpu
-ComPtr<ID3D12Resource> constantBuffer;
+ComPtr<ID3D12Resource> constantBufferUploadHeap[frameBufferCount];
+ComPtr<ID3D12DescriptorHeap> cbvDescriptorHeap [frameBufferCount];
 
+ConstantBuffer cb;
+UINT8* cbColorMultiplierGPUAddress[frameBufferCount];
 HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
 UINT64 fenceValue[frameBufferCount];
 // this value is incremented each frame. each fence will have its own value
@@ -143,7 +146,7 @@ float zNear = 0.01f;
 float zFar  = 100.0f;
 
 glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, zNear, zFar);
-ConstantBuffer cb;
+
 cb.projectionMatrix = projectionMatrix;
 
     std::cerr.clear();
@@ -425,9 +428,19 @@ bool InitD3D()
     swapChain = static_cast<IDXGISwapChain3 *>(tempSwapChain);
 
     frameIndex = swapChain->GetCurrentBackBufferIndex();
-
-    // -- Create the Back Buffers (render target views) Descriptor Heap -- //
-
+    //create constantbufferdescriptionheap for each frame
+    //will store constant buffer descriptor
+    for (int i = 0; i < frameBufferCount; ++i) {
+        // -- Create the Back Buffers (render target views) Descriptor Heap -- //
+        D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+        cbvHeapDesc.NumDescriptors = 1;
+        cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        hr = device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&cbvDescriptorHeap[frameBufferCount]));
+        if (FAILED(hr))
+        {
+            Running = false;
+        }
+    }
     // describe an rtv descriptor heap and create
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
     rtvHeapDesc.NumDescriptors = frameBufferCount;     // number of descriptors for this heap
@@ -633,6 +646,26 @@ bool InitD3D()
         nullptr,                        // optimized clear value must be null for this type of resource. used for render targets and depth/stencil buffers
         IID_PPV_ARGS(&vertexBuffer));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
+
+    for (int i = 0; i < frameBufferCount; ++i)
+    {
+        device->CreateCommittedResource(
+            &heapPropertiesUpload,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&constantBufferUploadHeap[i]));
+        constantBufferUploadHeap[i]->SetName(L"Constant Buffer Upload Resource Heap");
+
+        //create constant buffer view
+
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+        cbvDesc.BufferLocation = constantBufferUploadHeap[i]->GetGPUVirtualAddress();
+        cbvDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255;
+        device->CreateConstantBufferView(&cbvDesc, cbvDescriptorHeap[i]->GetCPUDescriptorHandleForHeapStart());
+        
+    }
 
     // create upload heap
     // upload heaps are used to upload data to the GPU. CPU can write to it, GPU can read from it
