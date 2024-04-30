@@ -8,6 +8,7 @@
 
 #include "d3dx12.h"
 #include "Window.h"
+#include "WipImgui.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -55,6 +56,10 @@ LRESULT CALLBACK WndProc(HWND hwnd,
     LPARAM lParam)
 
 {
+    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+        return true;
+
     Window* window = nullptr;
     if (msg == WM_NCCREATE) {
         // Set the pointer to window instance
