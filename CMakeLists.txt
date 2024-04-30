@@ -14,8 +14,9 @@ if (DEFINED ENV{VCPKG_PATH})
 		math(EXPR substring_length "${INDEX} + 5")
 		string(SUBSTRING $ENV{VCPKG_PATH} 0 ${substring_length} SUBSTRING_PATH)
 	endif ()
-	set(VCPKG_INSTALL_PATH ${SUBSTRING_PATH})
-	message(STATUS "Found path for vcpg repository:  ${SUBSTRING_PATH}")
+	string(REPLACE "\\" "/" SUBSTRING_PATH_ "${SUBSTRING_PATH}")
+	set(VCPKG_INSTALL_PATH ${SUBSTRING_PATH_})
+	message(STATUS "Found path for vcpg repository:  ${SUBSTRING_PATH_}")
 endif()
 
 include(FetchContent)
@@ -40,7 +41,7 @@ run_vcpkg(
 #create project
 project(gaussian_splatting LANGUAGES CXX)
 
-#set(SOURCE main.cpp DxException.cpp)
+file(GLOB_RECURSE LOAD_FILES shader/*.hlsl assets/*.ply)
 file(GLOB SOURCE header/*.h src/*.cpp)
 set(NAME_EXE Gaussian-Splatting)
 
@@ -63,12 +64,12 @@ set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
 #load additional files
 target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
+target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/assets)
+target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/shader)
 
-set(HLSL_FILES VertexShader.hlsl PixelShader.hlsl)
-# Add the HLSL files to your project
-foreach(shader_file IN ITEMS ${HLSL_FILES})
-	# Copy the HLSL files to the output directory for execution
-	configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${shader_file} COPYONLY)
-	# Copy the shader files to the build directory
-	configure_file(${shader_file} ${CMAKE_CURRENT_BINARY_DIR}/${shader_file} COPYONLY)
-endforeach(shader_file)
+# Add files to project
+foreach(_file IN ITEMS ${LOAD_FILES})
+    get_filename_component(filename ${_file} NAME)
+    configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${filename} COPYONLY)
+    configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${filename} COPYONLY)
+endforeach(_file)
