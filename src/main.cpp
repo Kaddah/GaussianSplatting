@@ -3,16 +3,9 @@
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-#include <Windows.h>
-#include <initguid.h>
-#include <imgui.h>
-#include <wrl/client.h>
-#include <iostream>
 
-#include "vector.h"
-#include "matrix.h"
+#include <iostream>
 #include "DxException.h"
-#include "Window.h"
 #include "GaussianRenderer.h"
 
 
@@ -78,8 +71,3 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	return 0;
 }
-
-
-
-
-
