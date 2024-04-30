@@ -5,7 +5,7 @@
 #include <Window.h>
 #include <GaussianRenderer.h>
 
-extern ID3D12GraphicsCommandList* commandList;
+ID3D12GraphicsCommandList* commandList = nullptr;
 
 void initImgui(ID3D12Device* device,int frameBufferCount, HWND hWnd) {
 	ID3D12DescriptorHeap* srvHeap = nullptr;
