@@ -34,7 +34,7 @@ public:
 	void mainloop();
 	~Window();
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE            getRTVHandle();
+	CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
 
 protected:
 	int _width;
@@ -68,7 +68,7 @@ protected:
 		int ShowWnd,
 		bool fullscreen, LPCWSTR windowName);
 
-	bool InitD3D();
+	bool InitD3D();		
 	void UpdatePipeline();
 
 };

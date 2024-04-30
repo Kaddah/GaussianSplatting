@@ -251,7 +251,7 @@ bool Window::InitD3D()
     swapChainDesc.BufferDesc = backBufferDesc;                   
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; //pipeline will render to this swap chain
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;    // dxgi will discard the buffer (data) after call present
-    swapChainDesc.OutputWindow = _hwnd;                          
+    swapChainDesc.OutputWindow = _hwnd;              
     swapChainDesc.SampleDesc = sampleDesc;                       
     swapChainDesc.Windowed = !_fullScreen;                        
 
@@ -496,6 +496,15 @@ bool Window::InitD3D()
         _running = false;
     }
 
+    if (SUCCEEDED(hr)) {
+        initImgui(device.Get(), frameBufferCount, _hwnd);
+    }
+    else {
+        return false;
+    }
+
+
+
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
     vertexBufferView.StrideInBytes = sizeof(Vertex);
@@ -566,10 +575,15 @@ void Window::mainloop()
         if (!_running) {
             break;
         }
-            
+
+        startMainImgui();
+
         Render(); // execute the command queue
+
+        endMainImgui();
          
     }
+    killImgui();
 }
 
 void Window::UpdatePipeline()

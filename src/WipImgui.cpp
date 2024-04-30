@@ -7,7 +7,7 @@
 
 extern ID3D12GraphicsCommandList* commandList;
 
-void initImGui(ID3D12Device* device,int frameBufferCount, HWND hWnd) {
+void initImgui(ID3D12Device* device,int frameBufferCount, HWND hWnd) {
 	ID3D12DescriptorHeap* srvHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.NumDescriptors = 1;
