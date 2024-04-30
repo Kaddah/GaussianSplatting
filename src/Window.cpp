@@ -41,6 +41,7 @@ Window::~Window()
         BOOL fs = false;
         if (swapChain->GetFullscreenState(&fs, NULL))
             swapChain->SetFullscreenState(false, NULL);
+        killImgui();
         CloseHandle(fenceEvent);
 }
 
@@ -583,7 +584,6 @@ void Window::mainloop()
         endMainImgui();
          
     }
-    killImgui();
 }
 
 void Window::UpdatePipeline()
