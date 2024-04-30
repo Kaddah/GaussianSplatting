@@ -12,6 +12,7 @@
 #include <imgui.h>
 #include <wrl/client.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include "vector.h"
 #include "matrix.h"
@@ -23,6 +24,8 @@
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+
 
 // #10 - obsolet with ply parser - MH
 //struct Vertex
@@ -46,6 +49,13 @@ std::vector<Vertex> vertices;
 bool InitializeWindow(HINSTANCE hInstance,
                       int ShowWnd,
                       bool fullscreen);
+
+struct ConstantBuffer
+{
+    glm::mat4 projectionMatrix;
+};
+
+
 void mainloop();
 LRESULT CALLBACK WndProc(HWND hWnd,
                          UINT msg,
@@ -61,9 +71,12 @@ ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap; // a descriptor heap to hold res
 ComPtr<ID3D12Resource> renderTargets[frameBufferCount]; // number of render targets equal to buffer count
 ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
-ComPtr<ID3D12Fence> fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu
+ComPtr<ID3D12Fence> fence[frameBufferCount]; // an object that is locked while our command list is being executed by the gpu
+ComPtr<ID3D12Resource> constantBuffer;
+
 HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
-UINT64 fenceValue[frameBufferCount];                        // this value is incremented each frame. each fence will have its own value
+UINT64 fenceValue[frameBufferCount];
+// this value is incremented each frame. each fence will have its own value
 int frameIndex;                                             // current rtv we are on
 int rtvDescriptorSize;                                      // size of the rtv descriptor on the device (all front and back buffers will be the same size)
 
@@ -124,6 +137,14 @@ int WINAPI WinMain(HINSTANCE hInstance, // Main windows function
         std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
         std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
     }
+float aspectRatio = Width / Height;
+float fov = glm::radians(45.0f);
+float zNear = 0.01f;
+float zFar  = 100.0f;
+
+glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, zNear, zFar);
+ConstantBuffer cb;
+cb.projectionMatrix = projectionMatrix;
 
     std::cerr.clear();
 

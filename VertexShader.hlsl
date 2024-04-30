@@ -1,3 +1,6 @@
+cbuffer ConstantBuffer : register(b0) {
+    matrix projectionMatrix;
+};
 struct VS_INPUT
 {
     float3 pos : POSITION;
@@ -13,7 +16,7 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.pos = float4(input.pos, 1.0f);
+    output.pos = mul(float4(input.pos, 1.0f, projectionMatrix);
     output.color = input.color;
     return output;
 }
