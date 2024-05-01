@@ -283,8 +283,23 @@ bool Window::InitD3D()
         return false;
     }
 
+    // Create descriptor heap for SRV
+    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    srvHeapDesc.NumDescriptors = 1;
+    srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    hr = device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&srvHeap));
+    if (FAILED(hr))
+    {
+        return false;
+    }
+    // Store handles
+    cpuHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
+    gpuHandle = srvHeap->GetGPUDescriptorHandleForHeapStart();
+
     // get the size of a descriptor in this heap
     rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
 
     // get a handle to the first descriptor in the descriptor heap (handle is like pointer)
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -498,7 +513,7 @@ bool Window::InitD3D()
     }
 
     if (SUCCEEDED(hr)) {
-        initImgui(device.Get(), frameBufferCount, _hwnd);
+        initImgui(device.Get(), frameBufferCount, _hwnd, srvHeap.Get(), cpuHandle, gpuHandle);   
     }
     else {
         return false;
