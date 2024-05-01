@@ -519,8 +519,6 @@ bool Window::InitD3D()
         return false;
     }
 
-
-
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
     vertexBufferView.StrideInBytes = sizeof(Vertex);
@@ -548,7 +546,6 @@ void Window::Render()
     HRESULT hr;
 
     UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
-
     // create an array of command lists (only one command list here)
     ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 
@@ -567,7 +564,6 @@ void Window::Render()
     {
         _running = false;
     }
-    endMainImgui(commandList.Get());
 }
 
 void Window::mainloop()
@@ -596,19 +592,16 @@ void Window::mainloop()
         startMainImgui();
 
         Render(); // execute the command queue
-
-
-         
     }
 }
 
 void Window::UpdatePipeline()
 {
     HRESULT hr;
-
+    
     // wait for the gpu to finish with the command allocator before we reset it
     WaitForPreviousFrame();
-
+    
     // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list was stored in
     hr = commandAllocator[frameIndex]->Reset();
     if (FAILED(hr))
@@ -632,6 +625,8 @@ void Window::UpdatePipeline()
 
     draw();
 
+    endMainImgui(commandList.Get());
+    
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commandList->ResourceBarrier(1, &resBarrierTransPresent);

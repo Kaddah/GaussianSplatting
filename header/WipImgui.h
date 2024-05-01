@@ -8,6 +8,6 @@ void initImgui(ID3D12Device* device, int frameBufferCount, HWND hWnd, ID3D12Desc
 
 void startMainImgui();
 
-void endMainImgui(ID3D12GraphicsCommandList* commandList);
+void endMainImgui(ID3D12GraphicsCommandList* commandList);	
 
 void killImgui();
