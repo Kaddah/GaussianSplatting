@@ -2,8 +2,9 @@
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 #include <Window.h>
+#include "GaussianRenderer.h"
 
-ID3D12GraphicsCommandList* commandList = nullptr;
+//extern ID3D12GraphicsCommandList* commandList;
 
 void initImgui(ID3D12Device* device,int frameBufferCount, HWND hWnd) {
 	ID3D12DescriptorHeap* srvHeap = nullptr;
@@ -37,7 +38,7 @@ void startMainImgui() {
 	ImGui::ShowDemoWindow();
 }		
 
-void endMainImgui() {
+void endMainImgui(ID3D12GraphicsCommandList* commandList) {
 	ImGui::Render();
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 }

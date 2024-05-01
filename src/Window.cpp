@@ -552,6 +552,7 @@ void Window::Render()
     {
         _running = false;
     }
+    endMainImgui(commandList.Get());
 }
 
 void Window::mainloop()
@@ -581,7 +582,7 @@ void Window::mainloop()
 
         Render(); // execute the command queue
 
-        endMainImgui();
+
          
     }
 }
