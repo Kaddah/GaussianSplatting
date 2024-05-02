@@ -663,7 +663,6 @@ void Window::UpdateVertexBuffer(const std::vector<Vertex>& vertices) {
 bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
     try {
         vBufferSize = vertices.size() * sizeof(Vertex);
-        int vSize = sizeof(Vertex);
         // Create default heap for the vertex buffer
         auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);

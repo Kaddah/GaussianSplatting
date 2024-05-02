@@ -79,7 +79,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// #10 start to import PLY file - MH
 	//std::string plyFilename = "../triangle-data-test.ply";
 	//std::string plyFilename = "../bycicle-test.ply";
-	std::string plyFilename = "../file.ply";
+	std::string plyFilename = "../assets/file.ply";
 	vertices = PlyReader::readPlyFile(plyFilename);
 
 
