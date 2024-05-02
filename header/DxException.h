@@ -1,6 +1,14 @@
 #ifndef EXCEPTION_H
 #define EXCEPTION_H
 
+#define NDEBUG
+
+#ifdef NDEBUG
+#define DEBUG_ASSERT(exp) if (!(exp)) { std::cout << "Critical error in file: " << __FILE__ << std::endl; throw; }
+#else 
+#define DEBUG_ASSERT(exp)
+#endif // NDEBUG
+
 #include <stdexcept>
 #include <exception>
 #include <string>
