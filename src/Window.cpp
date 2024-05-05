@@ -624,7 +624,7 @@ void Window::UpdatePipeline()
     commandList->ResourceBarrier(1, &resBarrierTransition);
 
     draw();
-
+    commandList->SetDescriptorHeaps(1, srvHeap.GetAddressOf());
     endMainImgui(commandList.Get());
     
     // transition the "frameIndex" render target from the render target state to the present state

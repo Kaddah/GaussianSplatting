@@ -7,7 +7,7 @@ void initImgui(ID3D12Device* device,int frameBufferCount, HWND hWnd, ID3D12Descr
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
 
 	// Setup Platform/Renderer backends
