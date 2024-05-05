@@ -72,8 +72,6 @@ protected:
 	ID3D12RootSignature* rootSignature;       // root signature defines data shaders will access
 	D3D12_VIEWPORT viewport;                  // area that output from rasterizer will be stretched to.
 	D3D12_RECT scissorRect;                   // the area to draw in. pixels outside that area will not be drawn onto
-	ID3D12Resource* vertexBuffer;             // a default buffer in GPU memory that we will load vertex data for our triangle into
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle; // CPU handle for the SRV heap
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle; // GPU handle for the SRV heap
 	ID3D12DescriptorHeap* getSrvHeap; // get the SRV heap
