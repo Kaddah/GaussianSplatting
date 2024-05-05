@@ -431,7 +431,6 @@ LRESULT CALLBACK WndProc(HWND hwnd,
     UINT msg,
     WPARAM wParam,
     LPARAM lParam)
-
 {
     extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
     if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
@@ -543,8 +542,6 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
 void Window::Render()
 {
     HRESULT hr;
-
-    
 
     UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
     // create an array of command lists (only one command list here)
