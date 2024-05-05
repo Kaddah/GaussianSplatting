@@ -65,6 +65,7 @@ protected:
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle; // CPU handle for the SRV heap
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle; // GPU handle for the SRV heap
+	ID3D12DescriptorHeap* getSrvHeap; // get the SRV heap
 
 
 	bool InitializeWindow(HINSTANCE hInstance,

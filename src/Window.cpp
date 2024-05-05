@@ -293,6 +293,7 @@ bool Window::InitD3D()
     {
         return false;
     }
+    getSrvHeap = srvHeap.Get();
     // Store handles
     cpuHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
     gpuHandle = srvHeap->GetGPUDescriptorHandleForHeapStart();
@@ -624,7 +625,7 @@ void Window::UpdatePipeline()
     commandList->ResourceBarrier(1, &resBarrierTransition);
 
     draw();
-    commandList->SetDescriptorHeaps(1, srvHeap.GetAddressOf());
+    commandList->SetDescriptorHeaps(1, &getSrvHeap);
     endMainImgui(commandList.Get());
     
     // transition the "frameIndex" render target from the render target state to the present state
