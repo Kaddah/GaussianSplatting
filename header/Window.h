@@ -6,17 +6,20 @@
 #include <D3Dcompiler.h>
 #include <wrl/client.h>
 #include <d3dx12.h>
+#include <Vertex.h>
+
+
 
 using Microsoft::WRL::ComPtr;
 
 constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 
-struct Vertex
-{
-	Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-	glm::vec3 pos;
-	glm::vec4 color;
-};
+//struct Vertex
+//{
+//	Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
+//	glm::vec3 pos;
+//	glm::vec4 color;
+//};
 
 class Window {
 public:
@@ -27,14 +30,22 @@ public:
 		HINSTANCE hInstance, 
 		int nShowCmd);
 
+	
 	virtual void draw() = 0;
+	//virtual std::vector<Vertex> prepareTriangle()=0;
+	virtual std::vector<Vertex>  prepareTriangle() = 0;
 	void Stop();
 	void WaitForPreviousFrame();
 	void Render();
 	void mainloop();
+	
+	void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
+	bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
 	~Window();
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
+	ID3D12Resource* vertexBuffer;             // a default buffer in GPU memory that we will load vertex data for our triangle into
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
 protected:
 	int _width;
@@ -68,11 +79,11 @@ protected:
 	ID3D12DescriptorHeap* getSrvHeap; // get the SRV heap
 
 
+	bool InitD3D();
 	bool InitializeWindow(HINSTANCE hInstance,
 		int ShowWnd,
 		bool fullscreen, LPCWSTR windowName);
 
-	bool InitD3D();		
 	void UpdatePipeline();
 
 };
