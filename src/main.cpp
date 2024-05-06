@@ -75,18 +75,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	std::string plyFilename = "../assets/file.ply";
 	vertices = PlyReader::readPlyFile(plyFilename);
 
-
-	// #10 check import success - MH
-	// Plott vertices for debuging
-	//std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
-	//for (size_t i = 0; i < vertices.size(); ++i) {
-	//  const Vertex& vertex = vertices[i];
-	//  std::cout << "Vertex " << i << ": " << std::endl;
-	//  std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
-	//  std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
-	//  std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
-	// }
-
 	try
 	{
 		GaussianRenderer window (L"Triangle", 800, 600, false, hInstance, nShowCmd, vertices, quads);

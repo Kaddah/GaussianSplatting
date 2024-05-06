@@ -22,10 +22,6 @@ GaussianRenderer::GaussianRenderer(LPCTSTR WindowName, int width, int height, bo
 
 }
 
-
-
-
-
 void GaussianRenderer::draw()
 {
     const auto rtvHandle = getRTVHandle();
@@ -46,37 +42,13 @@ void GaussianRenderer::draw()
     commandList->DrawInstanced(getQuadVertices().size(), 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
 }
     
-
 std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
     m_quads.clear();
     //#12 Access baseVertices from PLY file
     const std::vector<Vertex>m_Vertices = getVertices();
-    // #10 check import success - MH
-    // Plott vertices for debuging
-    //std::cout << "Number of imported vertices: " << m_vertices.size() << std::endl;
-    //for (size_t i = 0; i < m_vertices.size(); ++i) {
-    //  const Vertex& vertex = m_vertices[i];
-    //  std::cout << "Vertex " << i << ": " << std::endl;
-    //  std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
-    //  std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
-    //  std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
-    // }
 
        //#12 Generate quad cloud mesh - MH
     std::vector <GeoGenerator::MeshData> quads = quadGen.GenerateQuadsForVertices(m_vertices, quadSize);
-
-    //#12 Check if quads are calculated correctly - MH
-   /* for (size_t i = 0; i < quads.size(); ++i) {
-        std::cout << "Quads for Vertex " << i << ":" << std::endl;
-        const auto& meshData = quads[i];
-        for (size_t j = 0; j < meshData.vertices.size(); ++j) {
-            const Vertex& quadVertex = meshData.vertices[j];
-            std::cout << "  Quad Vertex " << j << ": " << std::endl;
-            std::cout << "    Position: (" << quadVertex.pos.x << ", " << quadVertex.pos.y << ", " << quadVertex.pos.z << ")" << std::endl;
-            std::cout << "    Normal: (" << quadVertex.normal.x << ", " << quadVertex.normal.y << ", " << quadVertex.normal.z << ")" << std::endl;
-            std::cout << "    Color: (" << static_cast<int>(quadVertex.color.r) << ", " << static_cast<int>(quadVertex.color.g) << ", " << static_cast<int>(quadVertex.color.b) << ")" << std::endl;
-        }
-    }*/
 
     uint32_t currentIndexOffset = 0;
     for (const auto& quad : quads) {
@@ -86,29 +58,6 @@ std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
         }
         currentIndexOffset += quad.vertices.size(); // Update offset for next quad
     }
-
-//#12 CHECK if quads are created
-//    std::cout << "Quad Vertices: \n";
-//for (size_t i = 0; i < m_quads.size(); ++i) {
-//    const Vertex& v = m_quads[i];
-//    std::cout << "Vertex " << i << ":\n"
-//        << "  Position: (" << v.pos.x << ", " << v.pos.y << ", " << v.pos.z << ")\n"
-//        << "  Normal: (" << v.normal.x << ", " << v.normal.y << ", " << v.normal.z << ")\n"
-//        << "  Color: (" << static_cast<int>(v.color.r) << ", "
-//        << static_cast<int>(v.color.g) << ", "
-//        << static_cast<int>(v.color.b) << ")\n";
-//}
-
-  //std::cout << "Quad Vertices:\n" << m_quads.data();
-
-  //std::cout << "Quad Indices: \n";
-  //for (size_t i = 0; i < quadIndices.size(); ++i) {
-  //    std::cout << quadIndices[i];
-  //    if ((i + 1) % 3 == 0) // Assuming triangles, print a newline every three indices
-  //        std::cout << "\n";
-  //    else
-  //        std::cout << ", ";
-  //}
   return m_quads;
 }
 

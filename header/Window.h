@@ -14,13 +14,6 @@ using Microsoft::WRL::ComPtr;
 
 constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 
-//struct Vertex
-//{
-//	Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, z) {}
-//	glm::vec3 pos;
-//	glm::vec4 color;
-//};
-
 class Window {
 public:
 	Window(LPCTSTR WindowName,
