@@ -3,6 +3,7 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <D3Dcompiler.h>
 #include <wrl/client.h>
 #include <d3dx12.h>
@@ -62,9 +63,11 @@ protected:
 	ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 	ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
 	ComPtr<ID3D12Fence> fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu
+	ComPtr<ID3D12Resource> constantBufferUploadHeaps[frameBufferCount];//#######################
 
 	HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
-	UINT64 fenceValue[frameBufferCount];                        // this value is incremented each frame. each fence will have its own value
+	UINT64 fenceValue[frameBufferCount];  // this value is incremented each frame. each fence will have its own value
+	UINT8* cbvGPUAddress[frameBufferCount];//####################
 	int frameIndex;                                             // current rtv we are on
 	int rtvDescriptorSize;                                      // size of the rtv descriptor on the device (all front and back buffers will be the same size)
 	ID3D12PipelineState* pipelineStateObject; // pso containing a pipeline state
