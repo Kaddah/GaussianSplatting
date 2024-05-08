@@ -22,8 +22,13 @@ constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 
 //	glm::vec4 color;
 //};
 struct ConstantBuffer {
-	glm::vec4 cbv;
+	glm::mat4 wvpMat;
+	
+
 };
+
+int ConstantBufferAlignedSize = (sizeof(ConstantBuffer) + 255) & ~255;
+ConstantBuffer cbObj;
 
 class Window {
 public:
