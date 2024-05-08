@@ -21,6 +21,9 @@ constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 
 //	glm::vec3 pos;
 //	glm::vec4 color;
 //};
+struct ConstantBuffer {
+	glm::vec4 cbv;
+};
 
 class Window {
 public:
@@ -62,14 +65,16 @@ protected:
 	ComPtr<ID3D12Resource> renderTargets[frameBufferCount]; // number of render targets equal to buffer count
 	ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 	ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
-	ComPtr<ID3D12Fence> fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu
-	ComPtr<ID3D12Resource> constantBufferUploadHeaps[frameBufferCount];//#######################
+	ComPtr<ID3D12Fence> fence[frameBufferCount]; 
+	ComPtr<ID3D12DescriptorHeap>cbvDescriptorHeap[frameBufferCount];// an object that is locked while our command list is being executed by the gpu
+	ComPtr<ID3D12Resource> constantBufferUploadHeap[frameBufferCount];//#######################
 
 	HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
 	UINT64 fenceValue[frameBufferCount];  // this value is incremented each frame. each fence will have its own value
 	UINT8* cbvGPUAddress[frameBufferCount];//####################
 	int frameIndex;                                             // current rtv we are on
-	int rtvDescriptorSize;                                      // size of the rtv descriptor on the device (all front and back buffers will be the same size)
+	int rtvDescriptorSize;// size of the rtv descriptor on the device (all front and back buffers will be the same size)
+	ConstantBuffer cbvData;
 	ID3D12PipelineState* pipelineStateObject; // pso containing a pipeline state
 	ID3D12RootSignature* rootSignature;       // root signature defines data shaders will access
 	D3D12_VIEWPORT viewport;                  // area that output from rasterizer will be stretched to.
