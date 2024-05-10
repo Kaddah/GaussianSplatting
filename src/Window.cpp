@@ -10,6 +10,7 @@
 #include "Window.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
+#include <CameraMaths.h>
 
 
 using namespace DirectX;
@@ -123,6 +124,19 @@ bool Window::InitD3D()
     swapChain = static_cast<IDXGISwapChain3*>(tempSwapChain);
 
     frameIndex = swapChain->GetCurrentBackBufferIndex();
+
+    //create constantbuffer descriptor for each frame
+    for (int i = 0; i < frameBufferCount; i++) {
+         D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+         cbvHeapDesc.NumDescriptors = frameBufferCount;
+         cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+         hr = device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&cbvDescriptorHeap[frameBufferCount
+         ]));
+         if (FAILED(hr)) {
+             return false;
+         }
+
+    }
 
     //Create the Back Buffers (render target views) Descriptor Heap 
     // describe an rtv descriptor heap and create
@@ -737,4 +751,33 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
         std::cerr << "Error initializing vertex buffer: " << e.what() << std::endl;
         return false;
     }
+}
+bool Window::InitializeConstantBuffer() {
+    HRESULT hr;
+
+    for (int i = 0; i < frameBufferCount; ++i)
+    {
+       hr = device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&constantBufferUploadHeap[i]));
+        constantBufferUploadHeap[i]->SetName(L"Constant Buffer Upload Resource Heap");
+
+        //create constant buffer view
+
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+        cbvDesc.BufferLocation = constantBufferUploadHeap[i]->GetGPUVirtualAddress();
+        cbvDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255;
+        device->CreateConstantBufferView(&cbvDesc, cbvDescriptorHeap[i]->GetCPUDescriptorHandleForHeapStart());
+
+        
+    CD3DX12_RANGE readRange(0, 0);    // We do not intend to read from this resource on the CPU. (End is less than or equal to begin)
+    hr = constantBufferUploadHeap[i]->Map(0, &readRange, reinterpret_cast<void**>(&cbvGPUAddress[i]));
+    memcpy(cbvGPUAddress[i], &cbObj, sizeof(cbObj));
+    }
+
+
 }
