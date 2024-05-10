@@ -37,11 +37,13 @@ bool Window::InitD3D()
     HRESULT hr;
 
     //Enable Debug Layer
+    #ifndef NDEBUG
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
         debugController->EnableDebugLayer();
         std::cout << "Debug layer ENABLED" << std::endl;
     }
+    #endif
 
     //Create Device
     IDXGIFactory4* dxgiFactory;
