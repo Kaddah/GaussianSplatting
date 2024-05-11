@@ -53,6 +53,19 @@ endforeach(PKG)
 # generate .exe
 add_executable(${NAME_EXE} ${SOURCE})
 
+#load files to project (sln)
+file(GLOB_RECURSE SHADER_FILES "shader/*.hlsl")
+source_group("Source Files/shader" FILES ${SHADER_FILES})
+file(GLOB_RECURSE ASSETS_FILES "assets/*.ply")
+source_group("Source Files/assets" FILES ${ASSETS_FILES})
+target_sources(${NAME_EXE} PRIVATE ${SHADER_FILES} ${ASSETS_FILES})
+
+# Exclude from build
+file(GLOB_RECURSE EXCLUDE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shader/*" "${CMAKE_CURRENT_SOURCE_DIR}/assets/*")
+foreach(FILE ${EXCLUDE_FILES})
+    set_source_files_properties(${FILE} PROPERTIES HEADER_FILE_ONLY TRUE)
+endforeach()
+
 target_link_libraries(${NAME_EXE} PRIVATE
     Microsoft::DirectXTK12
     glm::glm
@@ -61,15 +74,14 @@ target_link_libraries(${NAME_EXE} PRIVATE
 # Specify that the subcompile should use WinMain
 set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
 
-#load additional files
-target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+#make header avialable
 target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
-target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/assets)
-target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/shader)
 
-# Add files to project
+# Add files to build folder for executable
+file(GLOB LOAD_FILES "shader/*.hlsl" "assets/*.ply")
 foreach(_file IN ITEMS ${LOAD_FILES})
     get_filename_component(filename ${_file} NAME)
-    configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/Debug/${filename} COPYONLY)
-    configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${filename} COPYONLY)
+    get_filename_component(directory ${_file} DIRECTORY)
+    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" relative_directory ${directory})
+    configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${relative_directory}/${filename} COPYONLY)
 endforeach(_file)

@@ -235,7 +235,7 @@ bool Window::InitD3D()
     // compile vertex shader
     ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
     ID3DBlob* errorBuff;    // a buffer holding the error data if any
-    hr = D3DCompileFromFile(L"VertexShader.hlsl",
+    hr = D3DCompileFromFile(L"../shader/VertexShader.hlsl",
         nullptr,
         nullptr,
         "main",
@@ -257,7 +257,7 @@ bool Window::InitD3D()
 
     // compile pixel shader
     ID3DBlob* pixelShader;
-    ThrowIfFailed(D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
+    ThrowIfFailed(D3DCompileFromFile(L"../shader/PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
 
 
     // fill out shader bytecode structure for pixel shader
