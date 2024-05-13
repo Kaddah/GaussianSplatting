@@ -72,7 +72,16 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// #10 start to import PLY file - MH
 	//std::string plyFilename = "../triangle-data-test.ply";
 	//std::string plyFilename = "../bycicle-test.ply";
+	//std::string plyFilename = "../assets/file.ply";
+	
+	//default if exe get no argument
 	std::string plyFilename = "../assets/file.ply";
+	if (strlen(lpCmdLine) > 0)
+	{
+		// set path to given argument (if run in Visual Studio the argument is set by CMake File to "../assets/file.ply")
+		plyFilename = lpCmdLine;
+	}
+
 	vertices = PlyReader::readPlyFile(plyFilename);
 
 	try

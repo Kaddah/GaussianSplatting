@@ -50,6 +50,9 @@ foreach(PKG IN ITEMS ${PKGS})
 	find_package(${PKG} REQUIRED)
 endforeach(PKG)
 
+# config Debugger
+
+
 # generate .exe
 add_executable(${NAME_EXE} ${SOURCE})
 
@@ -85,3 +88,5 @@ foreach(_file IN ITEMS ${LOAD_FILES})
     string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" relative_directory ${directory})
     configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${relative_directory}/${filename} COPYONLY)
 endforeach(_file)
+
+set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "../assets/file.ply")
