@@ -89,4 +89,13 @@ foreach(_file IN ITEMS ${LOAD_FILES})
     configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${relative_directory}/${filename} COPYONLY)
 endforeach(_file)
 
-set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "../assets/file.ply")
+# Set CMAKE option
+#option(DEFAULT_PLY_FILE "Default PLY file path" "../assets/file.ply")
+
+set(DEFAULT_PLY_FILE "../assets/file.ply" CACHE STRING "Default PLY file path")
+
+
+message(STATUS "Default PLY file: ${DEFAULT_PLY_FILE}")
+
+# Set the CMake option as target argument for the debugger
+set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "${DEFAULT_PLY_FILE}")
