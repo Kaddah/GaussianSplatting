@@ -25,13 +25,6 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename) {
 
     Vertex vertex;
 
-    //while (plyFile.read(reinterpret_cast<char*>(&vertex), sizeof(Vertex))) {
-    //    // Konvertiere die Farben von unsigned char in den Bereich [0, 1]
-    //    vertex.color /= 255.0f;
-    //   
-    //    vertices.push_back(vertex);
-    //}
-
     while (std::getline(plyFile, line)) {
         std::istringstream iss(line);
         Vertex vertex;
@@ -47,7 +40,6 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename) {
         // Vertex zur Liste hinzufügen
         vertices.push_back(vertex);
     }
-
 
     plyFile.close();
 

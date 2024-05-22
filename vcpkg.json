@@ -4,6 +4,10 @@
     "dependencies": [
         "directxtk12",
         "glm",
-        "imgui"
+    {
+      "name": "imgui",
+      "features": ["dx12-binding", "win32-binding"]
+    } 
+
     ]
 }

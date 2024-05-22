@@ -8,6 +8,7 @@
 
 #include "d3dx12.h"
 #include "Window.h"
+#include "WipImgui.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
 #include <CameraMaths.h>
@@ -32,18 +33,18 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     }
 }
 
-
-
 bool Window::InitD3D()
 {
     HRESULT hr;
 
     //Enable Debug Layer
+    #ifndef NDEBUG
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
         debugController->EnableDebugLayer();
         std::cout << "Debug layer ENABLED" << std::endl;
     }
+    #endif
 
     //Create Device
     IDXGIFactory4* dxgiFactory;
@@ -110,8 +111,8 @@ bool Window::InitD3D()
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; //pipeline will render to this swap chain
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;    // dxgi will discard the buffer (data) after call present
     swapChainDesc.OutputWindow = _hwnd;
-    swapChainDesc.SampleDesc = sampleDesc;
-    swapChainDesc.Windowed = !_fullScreen;
+    swapChainDesc.SampleDesc = sampleDesc;                       
+    swapChainDesc.Windowed = !_fullScreen;                        
 
     IDXGISwapChain* tempSwapChain;
 
@@ -153,8 +154,24 @@ bool Window::InitD3D()
         return false;
     }
 
+    // Create descriptor heap for SRV
+    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    srvHeapDesc.NumDescriptors = 1;
+    srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    hr = device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&srvHeap));
+    if (FAILED(hr))
+    {
+        return false;
+    }
+    getSrvHeap = srvHeap.Get();
+    // Store handles
+    cpuHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
+    gpuHandle = srvHeap->GetGPUDescriptorHandleForHeapStart();
+
     // get the size of a descriptor in this heap
     rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
 
     // get a handle to the first descriptor in the descriptor heap (handle is like pointer)
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -232,7 +249,7 @@ bool Window::InitD3D()
     // compile vertex shader
     ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
     ID3DBlob* errorBuff;    // a buffer holding the error data if any
-    hr = D3DCompileFromFile(L"VertexShader.hlsl",
+    hr = D3DCompileFromFile(L"../shader/VertexShader.hlsl",
         nullptr,
         nullptr,
         "main",
@@ -254,13 +271,28 @@ bool Window::InitD3D()
 
     // compile pixel shader
     ID3DBlob* pixelShader;
-    ThrowIfFailed(D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
+    ThrowIfFailed(D3DCompileFromFile(L"../shader/PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
 
 
     // fill out shader bytecode structure for pixel shader
     D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
     pixelShaderBytecode.BytecodeLength = pixelShader->GetBufferSize();
     pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
+
+    // compile geometry shader
+    ID3DBlob* geometryShader;
+    hr = D3DCompileFromFile(L"../shader/GeometryShader.hlsl", nullptr, nullptr, "main", "gs_5_0",
+                            D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &geometryShader, &errorBuff);
+    if (FAILED(hr))
+    {
+      OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+      return false;
+    }
+
+    // fill out shader bytecode structure for geometry shader
+    D3D12_SHADER_BYTECODE geometryShaderBytecode = {};
+    geometryShaderBytecode.BytecodeLength        = geometryShader->GetBufferSize();
+    geometryShaderBytecode.pShaderBytecode       = geometryShader->GetBufferPointer();
 
     // create input layout
     D3D12_INPUT_ELEMENT_DESC inputLayout[] =
@@ -282,6 +314,7 @@ bool Window::InitD3D()
     psoDesc.pRootSignature = rootSignature;
     psoDesc.VS = vertexShaderBytecode;
     psoDesc.PS = pixelShaderBytecode;
+    psoDesc.GS = geometryShaderBytecode;
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // type of topology we are drawing
     psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;                     // format of the render target
     psoDesc.SampleDesc = sampleDesc;                                        // must be the same sample description as the swapchain and depth/stencil buffer
@@ -293,72 +326,12 @@ bool Window::InitD3D()
     // create the pso
     ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
-    //quaVerti = prepareTriangle();
-
      //Create vertex buffer
     Vertex vList[] = {
           {glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
           {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
           {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}
     };
-    //int vBufferSize = sizeof(vList);
-    //int vBufferSize = 10;
-
-    // Access the static member directly if it's public
-    //auto & quaVert = GaussianRenderer::getQuadVertices(); // Using the getter for safety
-    //int vBufferSize = sizeof(Vertex) * quaVerti.size();
-
-    //Vertex List[] = GaussianRenderer::getVertices.data();
-    //Vertex* vList = window.getVertices().data();
-
-   
-    //std::cout << vBufferSize;
-
-    //Vertex test = GaussianRenderer::getQuadVertices().data();
-
-    //auto heapPropertiesDefault = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    //auto heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    //auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
-
-    // create default heap
-    //device->CreateCommittedResource(
-    //    &heapPropertiesDefault,
-    //    D3D12_HEAP_FLAG_NONE,
-    //    &resourceDesc,
-    //    D3D12_RESOURCE_STATE_COPY_DEST,
-    //    nullptr,
-    //    IID_PPV_ARGS(&vertexBuffer));
-    //vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
-
-    // create upload heap
- /*   ID3D12Resource* vBufferUploadHeap;
-    device->CreateCommittedResource(
-        &heapPropertiesUpload,
-        D3D12_HEAP_FLAG_NONE,
-        &resourceDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
-        nullptr,
-        IID_PPV_ARGS(&vBufferUploadHeap));
-    vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");*/
-
-    // store vertex buffer in upload heap
-    //D3D12_SUBRESOURCE_DATA vertexData = {};
-
-    //vertexData.pData = reinterpret_cast<BYTE*>(vList); // pointer to our vertex array
-    //std::cout << GaussianRenderer::getQuadVertices().size();
-
-
-    //vertexData.pData = quaVerti.data(); // pointer to our vertex array
-
-    //vertexData.RowPitch = vBufferSize;                  // size of all our triangle vertex data
-    //vertexData.SlicePitch = vBufferSize;                // also the size of our triangle vertex data
-
-    // creating a command with the command list to copy the data from upload heap to default heap
-    //UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
-
-    // transition the vertex buffer data from copy destination state to vertex buffer state
-    //auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-    //commandList->ResourceBarrier(1, &resBarrierVertexBuffer);
 
     // execute the command list to upload the initial assets (triangle data)
     commandList->Close();
@@ -373,10 +346,12 @@ bool Window::InitD3D()
         _running = false;
     }
 
-    // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
- /*   vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
-    vertexBufferView.StrideInBytes = sizeof(Vertex);
-    vertexBufferView.SizeInBytes = vBufferSize;*/
+    if (SUCCEEDED(hr)) {
+        initImgui(device.Get(), frameBufferCount, _hwnd, srvHeap.Get(), cpuHandle, gpuHandle);   
+    }
+    else {
+        return false;
+    }
 
     // Fill out the Viewport
     viewport.TopLeftX = 0;
@@ -407,6 +382,7 @@ Window::~Window()
         WaitForPreviousFrame();
         // get swapchain out of full screen before exiting
         BOOL fs = false;
+        killImgui();
         if (swapChain->GetFullscreenState(&fs, NULL))
             swapChain->SetFullscreenState(false, NULL);
         CloseHandle(fenceEvent);
@@ -422,8 +398,11 @@ LRESULT CALLBACK WndProc(HWND hwnd,
     UINT msg,
     WPARAM wParam,
     LPARAM lParam)
-
 {
+    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+        return true;
+
     Window* window = nullptr;
     if (msg == WM_NCCREATE) {
         // Set the pointer to window instance
@@ -531,10 +510,7 @@ void Window::Render()
 {
     HRESULT hr;
 
-    
-
     UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
-
     // create an array of command lists (only one command list here)
     ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 
@@ -583,11 +559,12 @@ void Window::mainloop()
         if (!_running) {
             break;
         }
+
+        startMainImgui();
+
         Render(); // execute the command queue
-         
     }
 }
-
 
 void Window::UpdatePipeline()
 {
@@ -595,7 +572,7 @@ void Window::UpdatePipeline()
     
     // wait for the gpu to finish with the command allocator before we reset it
     WaitForPreviousFrame();
-
+    
     // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list was stored in
     ThrowIfFailed(commandAllocator[frameIndex]->Reset());
   
@@ -609,7 +586,9 @@ void Window::UpdatePipeline()
     
 
     draw();
-
+    commandList->SetDescriptorHeaps(1, &getSrvHeap);
+    endMainImgui(commandList.Get());
+    
     // transition the "frameIndex" render target from the render target state to the present state
     auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     commandList->ResourceBarrier(1, &resBarrierTransPresent);
@@ -656,10 +635,6 @@ void Window::UpdateVertexBuffer(const std::vector<Vertex>& vertices) {
     }
     
     size_t newValue = vertices.size() * sizeof(Vertex);
-    //if (newValue >= vertexBufferView.SizeInBytes) {
-    //    vertexBuffer->Unmap(0, nullptr);
-    //    throw std::runtime_error("Vertex data exceeds the size of the buffer. Consider resizing the buffer.");
-    //}
 
     Vertex* vertexDataBegin = nullptr;
     HRESULT hr = vertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataBegin));
@@ -680,8 +655,6 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
         // Create default heap for the vertex buffer
         auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
-        //auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(10);
-        //ID3D12Resource* vertexBuffer;
 
         HRESULT hr = device->CreateCommittedResource(
             &heapProperties,
@@ -694,9 +667,6 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
             throw std::runtime_error("Failed to create vertex buffer.");
         }
         vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
-
-
-
 
         // Create upload heap for vertex buffer
         auto heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -715,7 +685,6 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
 
         // Copy vertex data to upload heap
         D3D12_SUBRESOURCE_DATA vertexData = {};
-        //vertexData.pData = reinterpret_cast<BYTE*>(vertices.data());
         vertexData.pData = vertices.data();
         vertexData.RowPitch = vBufferSize;
         vertexData.SlicePitch = vBufferSize;

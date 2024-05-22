@@ -3,16 +3,9 @@
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-#include <Windows.h>
-#include <initguid.h>
-#include <imgui.h>
-#include <wrl/client.h>
-#include <iostream>
 
-#include "vector.h"
-#include "matrix.h"
+#include <iostream>
 #include "DxException.h"
-#include "Window.h"
 #include "GaussianRenderer.h"
 #include <PlyReader.h>
 #include "Vertex.h"
@@ -79,20 +72,17 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// #10 start to import PLY file - MH
 	//std::string plyFilename = "../triangle-data-test.ply";
 	//std::string plyFilename = "../bycicle-test.ply";
+	//std::string plyFilename = "../assets/file.ply";
+	
+	//default if exe get no argument
 	std::string plyFilename = "../assets/file.ply";
+	if (strlen(lpCmdLine) > 0)
+	{
+		// set path to given argument (if run in Visual Studio the argument is set by CMake File to "../assets/file.ply")
+		plyFilename = lpCmdLine;
+	}
+
 	vertices = PlyReader::readPlyFile(plyFilename);
-
-
-	// #10 check import success - MH
-	// Plott vertices for debuging
-	//std::cout << "Number of imported vertices: " << vertices.size() << std::endl;
-	//for (size_t i = 0; i < vertices.size(); ++i) {
-	//  const Vertex& vertex = vertices[i];
-	//  std::cout << "Vertex " << i << ": " << std::endl;
-	//  std::cout << "  Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")" << std::endl;
-	//  std::cout << "  Normale: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")" << std::endl;
-	//  std::cout << "  Color: (" << static_cast<int>(vertex.color.r) << ", " << static_cast<int>(vertex.color.g) << ", " << static_cast<int>(vertex.color.b) << ")" << std::endl;
-	// }
 
 	try
 	{
