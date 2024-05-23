@@ -50,4 +50,3 @@ std::vector <GeoGenerator::MeshData> GeoGenerator::GenerateQuadsForVertices(cons
 
     return quads;
 };
-
