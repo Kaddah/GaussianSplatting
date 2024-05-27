@@ -88,7 +88,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	{
 		GaussianRenderer window (L"Triangle", 800, 600, false, hInstance, nShowCmd, vertices, quads);
 		// start the main loop
-		window.mainloop();
+		window.mainloop(1000.0f,0.1f);
 		
 	}
 	catch (std::exception)

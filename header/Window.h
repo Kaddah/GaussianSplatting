@@ -30,8 +30,8 @@ public:
 	void Stop();
 	void WaitForPreviousFrame();
 	void Render();
-	void mainloop();
-	
+  void                         mainloop(float angle, float aspectRatio);
+	void UpdateConstantBuffer(const glm::mat4& rotationMat);
 	void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
 	bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
 	~Window();
@@ -55,8 +55,10 @@ protected:
 	ComPtr<ID3D12Resource> renderTargets[frameBufferCount]; // number of render targets equal to buffer count
 	ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 	ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
-	ComPtr<ID3D12Fence> fence[frameBufferCount];    // an object that is locked while our command list is being executed by the gpu
-
+	ComPtr<ID3D12Fence> fence[frameBufferCount]; // an object that is locked while our command list is being executed by the gpu
+	ComPtr<ID3D12Resource>       constantBuffer;
+	ComPtr<ID3D12DescriptorHeap> cbvHeap;
+	
 	HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
 	UINT64 fenceValue[frameBufferCount];                        // this value is incremented each frame. each fence will have its own value
 	int frameIndex;                                             // current rtv we are on
