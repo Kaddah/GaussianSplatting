@@ -524,7 +524,7 @@ void Window::Render()
 {
     HRESULT hr;
 
-    UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
+    UpdatePipeline(100.0f, 0.1f); // update the pipeline by sending commands to the commandqueue
     // create an array of command lists (only one command list here)
     ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 
@@ -545,7 +545,7 @@ void Window::Render()
     }
 }
 
-void Window::mainloop(float angle, float aspectRatio)
+void Window::mainloop()
 {
     MSG msg;
     ZeroMemory(&msg, sizeof(MSG));
@@ -558,13 +558,7 @@ void Window::mainloop(float angle, float aspectRatio)
    
   
 
-    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 viewMatrix =
-    glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-    glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
-
-    UpdateConstantBuffer(rotationMat);
+    
 
     while (_running)
     {
@@ -590,7 +584,7 @@ void Window::mainloop(float angle, float aspectRatio)
     }
 }
 
-void Window::UpdatePipeline()
+void Window::UpdatePipeline(float angle, float aspectRatio)
 {
     HRESULT hr;
     
@@ -603,7 +597,13 @@ void Window::UpdatePipeline()
     // reset the command list
     ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
- 
+    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 viewMatrix =
+    glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
+
+    UpdateConstantBuffer(rotationMat);
     
  
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)

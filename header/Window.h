@@ -30,7 +30,7 @@ public:
 	void Stop();
 	void WaitForPreviousFrame();
 	void Render();
-  void                         mainloop(float angle, float aspectRatio);
+  void                         mainloop();
 	void UpdateConstantBuffer(const glm::mat4& rotationMat);
 	void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
 	bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
@@ -77,6 +77,6 @@ protected:
 		int ShowWnd,
 		bool fullscreen, LPCWSTR windowName);
 
-	void UpdatePipeline();
+	void UpdatePipeline(float angle, float aspectRatio);
 
 };
