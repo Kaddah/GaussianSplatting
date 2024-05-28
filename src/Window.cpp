@@ -6,8 +6,11 @@
 #include <wrl/client.h>
 #include <iostream>
 #include <glm/common.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 
 #include "d3dx12.h"
 #include "Window.h"
@@ -23,7 +26,6 @@ struct ConstantBuffer
 {
   glm::mat4 rotationMat;
 };
-ConstantBuffer*     cbData;
 
 std::vector<Vertex> quaVerti;
 size_t vBufferSize;
@@ -219,9 +221,12 @@ bool Window::InitD3D()
     return false;
   }
 
+  CD3DX12_ROOT_PARAMETER parameter = {};
+  parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+
   // create root signature
   CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+  rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
   ID3DBlob* signature;
   hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
@@ -318,30 +323,15 @@ bool Window::InitD3D()
                     {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
 
  
-   // Erstellen Sie einen Descriptor-Heap für die Constant Buffer View
-  D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-  cbvHeapDesc.NumDescriptors             = 1;
-  cbvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  cbvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  ThrowIfFailed(device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&cbvHeap)));
-
-  // Erstellen Sie die Constant Buffer Ressource
-  ThrowIfFailed(device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
-                                                &CD3DX12_RESOURCE_DESC::Buffer(sizeof(ConstantBuffer)),
-                                                D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                IID_PPV_ARGS(&constantBuffer)));
-
-  // Mappen Sie den Constant Buffer und initialisieren Sie ihn
-  CD3DX12_RANGE readRange(0, 0); // Wir beabsichtigen nicht, von dieser Ressource auf der CPU zu lesen.
-  ThrowIfFailed(constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&cbData)));
-  cbData->rotationMat = glm::mat4(1.0f); // Initialisieren mit Identitätsmatrix
-  constantBuffer->Unmap(0, nullptr);
-
-  // Erstellen Sie die Constant Buffer View
-  D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-  cbvDesc.BufferLocation                  = constantBuffer->GetGPUVirtualAddress();
-  cbvDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255; // CB size is required to be 256-byte aligned.
-  device->CreateConstantBufferView(&cbvDesc, cbvHeap->GetCPUDescriptorHandleForHeapStart());
+  // create constant buffer
+  for (int i = 0; i < frameBufferCount; i++)
+  {
+    const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    const auto constantBufferDesc   = CD3DX12_RESOURCE_DESC::Buffer(sizeof(ConstantBuffer));
+    ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&constantBuffer[i])));
+  }
 
   // execute the command list to upload the initial assets (triangle data)
   commandList->Close();
@@ -603,7 +593,8 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
     glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
     glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
 
-    UpdateConstantBuffer(rotationMat);
+    static float alpha = 0.f; // TODO Berkan, remove this again! This is only for testing
+    UpdateConstantBuffer(glm::rotate(alpha += 0.001, glm::vec3(0,1,0)));
     
  
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
@@ -751,18 +742,13 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
 {
-  if (!constantBuffer)
+  if (!constantBuffer[frameIndex])
   {
     throw std::runtime_error("Constant buffer is not initialized.");
   }
-
   ConstantBuffer* cbDataBegin = nullptr;
-  HRESULT         hr          = constantBuffer->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin));
-  if (FAILED(hr))
-  {
-    throw std::runtime_error("Failed to map constant buffer.");
-  }
+  ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
 
   cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
-  constantBuffer->Unmap(0, nullptr);
+  constantBuffer[frameIndex]->Unmap(0, nullptr);
 }

@@ -1,6 +1,6 @@
 cbuffer ConstantBuffer : register(b0)
 {
-    matrix rotationMat;
+    float4x4 rotationMat;
 };
 
 struct VS_INPUT
@@ -18,7 +18,7 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.pos = mul(input.pos, rotationMat);
+    output.pos = mul(rotationMat, input.pos);
     output.color = input.color;
     return output;
 }

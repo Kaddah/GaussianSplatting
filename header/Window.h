@@ -56,7 +56,7 @@ protected:
 	ComPtr<ID3D12CommandAllocator> commandAllocator[frameBufferCount]; // enough allocators for each buffer * number of threads
 	ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
 	ComPtr<ID3D12Fence> fence[frameBufferCount]; // an object that is locked while our command list is being executed by the gpu
-	ComPtr<ID3D12Resource>       constantBuffer;
+	ComPtr<ID3D12Resource>       constantBuffer[frameBufferCount];
 	ComPtr<ID3D12DescriptorHeap> cbvHeap;
 	
 	HANDLE fenceEvent;                                          // a handle to an event when our fence is unlocked by the gpu
