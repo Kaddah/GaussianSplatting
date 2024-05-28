@@ -45,5 +45,9 @@ void ImGuiAdapter::renderImGui()
 void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
   commandList->SetDescriptorHeaps(1, imguiSRVDescriptorHeap.GetAddressOf());
-  ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
+  
+  if (auto drawData = ImGui::GetDrawData())
+  {
+    ImGui_ImplDX12_RenderDrawData(drawData, commandList.Get());
+  }
 }
