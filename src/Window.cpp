@@ -540,6 +540,7 @@ void Window::UpdatePipeline()
   // imgui command list update here
   // PROBLEM HIER IMGUI 
   imguiAdapter->commandList(commandList);
+  ImGui::ShowDemoWindow();
   imguiAdapter->renderImGui();
 
   // transition the "frameIndex" render target from the render target state to the present state

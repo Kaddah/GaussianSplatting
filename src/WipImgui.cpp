@@ -36,8 +36,7 @@ void ImGuiAdapter::startMainImGui()
 {
   ImGui_ImplDX12_NewFrame();
   ImGui_ImplWin32_NewFrame();
-  ImGui::NewFrame();
-  ImGui::ShowDemoWindow();
+  ImGui::NewFrame();  
 }
 void ImGuiAdapter::renderImGui()
 {
