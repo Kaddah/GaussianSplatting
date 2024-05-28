@@ -509,7 +509,7 @@ void Window::mainloop()
       break;
     }
 
-    imguiAdapter->startMainImGui();
+    
 
     Render(); // execute the command queue
   }
@@ -538,10 +538,11 @@ void Window::UpdatePipeline()
 
   draw();
   // imgui command list update here
-  // PROBLEM HIER IMGUI 
-  imguiAdapter->commandList(commandList);
+  
+  imguiAdapter->startMainImGui();
   ImGui::ShowDemoWindow();
   imguiAdapter->renderImGui();
+  imguiAdapter->commandList(commandList);
 
   // transition the "frameIndex" render target from the render target state to the present state
   auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(
