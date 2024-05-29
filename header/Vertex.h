@@ -6,7 +6,7 @@
 struct Vertex {
     glm::vec3 pos; // Position double x, y, z;
     glm::vec3 normal; // Normale double nx, ny, nz;
-    glm::u8vec3 color; // Farben (8-Bit RGB) unsigned char r, g, b;
+    glm::vec4 color; // Farben (8-Bit RGB) unsigned char r, g, b;
     
 };
 

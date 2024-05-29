@@ -2,6 +2,7 @@
 #include "GeoGenerator.h"
 #include <vector>
 #include <glm/glm.hpp>
+#include <iostream>
 
 // Convert uint32 indices to uint16 for some graphics APIs that require it
 std::vector<GeoGenerator::uint16> GeoGenerator::MeshData::GetIndices16() const {
@@ -34,9 +35,25 @@ GeoGenerator::MeshData GeoGenerator::CreateQuad(const Vertex& baseVertex, float 
     meshData.vertices.push_back(Vertex{ p3, baseVertex.normal, baseVertex.color });
     meshData.vertices.push_back(Vertex{ p0, baseVertex.normal, baseVertex.color });
 
+
+        // Print the vertices
+    //std::cout << "Vertices:\n";
+    //for (const auto& vertex : meshData.vertices)
+    //{
+    //    std::cout << "Position: (" << vertex.pos.x << ", " << vertex.pos.y << ", " << vertex.pos.z << ")\n";
+    //    std::cout << "Normal: (" << vertex.normal.x << ", " << vertex.normal.y << ", " << vertex.normal.z << ")\n";
+    //    std::cout << "Color: (" << vertex.color.r << ", " << vertex.color.g << ", " << vertex.color.b  << ")\n";
+    //    std::cout << "\n";
+    //}
+
     // No indices are needed as we're now using direct vertex order for rendering
     return meshData;
 }
+
+
+
+
+
 
 // Generate a quad for each vertex in the vector
 std::vector <GeoGenerator::MeshData> GeoGenerator::GenerateQuadsForVertices(const std::vector<Vertex>& vertices, float quadSize) {

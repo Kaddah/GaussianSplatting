@@ -263,8 +263,13 @@ bool Window::InitD3D()
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
                                             {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-                                            {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex, color),
+                                            {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, color),
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+
+  //D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+  //    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+  //    {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}, // Correct offset if different
+  //};
 
   // fill out an input layout description structure
   D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -291,9 +296,9 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
   // Create vertex buffer
-  Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-                    {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-                    {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
+  //Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+  //                  {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+  //                  {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
 
   // execute the command list to upload the initial assets (triangle data)
   commandList->Close();
@@ -484,7 +489,7 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-  quaVerti = prepareTriangle();
+   quaVerti = prepareTriangle();
 
   InitializeVertexBuffer(quaVerti);
 

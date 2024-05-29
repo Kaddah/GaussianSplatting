@@ -4,8 +4,7 @@
     float4 color: COLOR;
 };
 
-float4 main(VS_OUTPUT input)
-    : SV_TARGET
+float4 main(VS_OUTPUT input) : SV_TARGET
 {
     static const float PI       = 3.14159265f;
     float3             cam_pos   = {0.5, 0.5, 0.5};
@@ -25,6 +24,6 @@ float4 main(VS_OUTPUT input)
     float4 sh_color = {abs(sh), abs(sh1_1), abs(sh2_0), 1.0};
     //float4 sh_color = {0.0, abs(sh1_1), 0.0, 1.0};
     // return interpolated color
-    // return input.color;
-    return sh_color;
+     return input.color;
+    //return sh_color;
 }
