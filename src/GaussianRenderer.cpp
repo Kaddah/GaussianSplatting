@@ -37,7 +37,9 @@ void GaussianRenderer::draw()
     commandList->RSSetViewports(1, &viewport);                               
     commandList->RSSetScissorRects(1, &scissorRect);                          
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); 
-    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);            
+    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+    commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());  
     
     commandList->DrawInstanced(getQuadVertices().size(), 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
 }
