@@ -12,8 +12,18 @@
 #include <DxException.h>
 #include <GaussianRenderer.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
+
+struct ConstantBuffer
+{
+  glm::mat4 rotationMat;
+};
 
 std::vector<Vertex> quaVerti;
 size_t              vBufferSize;
@@ -197,9 +207,14 @@ bool Window::InitD3D()
     return false;
   }
 
-  // create root signature
+
+  CD3DX12_ROOT_PARAMETER parameter = {};
+  parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
+
   CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+  // create root signature
+  rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
 
   ID3DBlob* signature;
   hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
@@ -301,6 +316,19 @@ bool Window::InitD3D()
   //                  {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
 
   // execute the command list to upload the initial assets (triangle data)
+
+
+
+    // create constant buffer
+  for (int i = 0; i < frameBufferCount; i++)
+  {
+    const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    const auto constantBufferDesc   = CD3DX12_RESOURCE_DESC::Buffer(sizeof(ConstantBuffer));
+    ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&constantBuffer[i])));
+  }
+
   commandList->Close();
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
   commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
@@ -463,7 +491,7 @@ void Window::Render()
 {
   HRESULT hr;
 
-  UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
+  UpdatePipeline(100.0f, 0.1f); // update the pipeline by sending commands to the commandqueue
   // create an array of command lists (only one command list here)
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
@@ -519,8 +547,48 @@ void Window::mainloop()
     Render(); // execute the command queue
   }
 }
+// rotation variables and mouse sensitivity
+static float alphaX = 0.0f;
+static float alphaY = 0.0f;
+static float alphaZ = 0.0f;
 
-void Window::UpdatePipeline()
+const float mouseSensX = 0.005f;
+const float mouseSensY = 0.005f;
+
+// Store previous mouse position
+static POINT prevMousePos = {0, 0};
+void         UpdateRotationFromMouse()
+{
+  if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
+  {
+    POINT currentMousePos;
+    GetCursorPos(&currentMousePos);
+
+    // Calculate the mouse movement delta
+    int deltaX = currentMousePos.x - prevMousePos.x;
+    int deltaY = currentMousePos.y - prevMousePos.y;
+
+    // Update rotation angles based on mouse movement
+    alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
+    alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
+    // clamp angles
+    alphaX = glm::mod(alphaX, glm::two_pi<float>());
+    alphaY = glm::mod(alphaY, glm::two_pi<float>());
+    // Update previous mouse position
+    prevMousePos = currentMousePos;
+  }
+  else
+  {
+    // Update previous mouse position when button is not pressed to avoid sudden jumps
+    GetCursorPos(&prevMousePos);
+  }
+}
+// Call function to initialize previous mouse pos
+void InitializeMousePosition()
+{
+  GetCursorPos(&prevMousePos);
+}
+void Window::UpdatePipeline(float angle, float aspectRatio)
 {
   HRESULT hr;
 
@@ -534,6 +602,21 @@ void Window::UpdatePipeline()
   // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
+
+   UpdateRotationFromMouse();
+
+  // Create individual rotation matrices for each axis
+  glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
+  glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
+  glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
+
+  // Combine the rotations
+  glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
+
+  // Update the constant buffer with the combined rotation matrix
+  UpdateConstantBuffer(rotationMat);
+  // Call this onc  to set the initial mouse position
+  InitializeMousePosition();
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
   //  draws to it starting from here
@@ -680,4 +763,17 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     std::cerr << "Error initializing vertex buffer: " << e.what() << std::endl;
     return false;
   }
+}
+
+void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
+{
+  if (!constantBuffer[frameIndex])
+  {
+    throw std::runtime_error("Constant buffer is not initialized.");
+  }
+  ConstantBuffer* cbDataBegin = nullptr;
+  ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
+  cbDataBegin->rotationMat = rotationMat;// Update the MVP matrix in the constant buffer
+  constantBuffer[frameIndex]->Unmap(0, nullptr);
+
 }

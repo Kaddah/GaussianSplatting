@@ -27,6 +27,7 @@ public:
   void                        WaitForPreviousFrame();
   void                        Render();
   void                        mainloop();
+  void                        UpdateConstantBuffer(const glm::mat4& rotationMat);
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
@@ -54,6 +55,8 @@ protected:
   ComPtr<ID3D12GraphicsCommandList> commandList; // add commands, execute to render the frame
   ComPtr<ID3D12Fence>
       fence[frameBufferCount]; // an object that is locked while our command list is being executed by the gpu
+  ComPtr<ID3D12Resource>       constantBuffer[frameBufferCount];
+  ComPtr<ID3D12DescriptorHeap> cbvHeap;
 
   HANDLE fenceEvent;                   // a handle to an event when our fence is unlocked by the gpu
   UINT64 fenceValue[frameBufferCount]; // this value is incremented each frame. each fence will have its own value
@@ -69,5 +72,5 @@ protected:
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
-  void UpdatePipeline();
+  void UpdatePipeline(float angle, float aspectRatio);
 };
