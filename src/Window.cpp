@@ -1,46 +1,38 @@
-#include <stdexcept> 
-#include <d3d12.h>
-#include <dxgi1_4.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include <wrl/client.h>
+#include <d3d12.h>
+#include <dxgi1_4.h>
 #include <iostream>
-#include <glm/common.hpp>
+#include <stdexcept>
+#include <wrl/client.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
-
-#include "d3dx12.h"
 #include "Window.h"
 #include "WipImgui.h"
+#include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
 
-
-
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
-struct ConstantBuffer
-{
-  glm::mat4 rotationMat;
-};
 
 std::vector<Vertex> quaVerti;
-size_t vBufferSize;
+size_t              vBufferSize;
 
-Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd): _width(width), _height(height), _hwnd(NULL), _running(true), _fullScreen(fullScreen) //initializer list
+Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd)
+    : _width(width)
+    , _height(height)
+    , _hwnd(NULL)
+    , _running(true)
+    , _fullScreen(fullScreen) // initializer list
 {
-    if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
-    {
-        throw std::runtime_error("Failed to initialize window");
-    }
-    if (!InitD3D())
-    {
-        MessageBox(0, L"Failed to initialize direct3d 12",
-            L"Error", MB_OK);
-    }
+  if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
+  {
+    throw std::runtime_error("Failed to initialize window");
+  }
+  if (!InitD3D())
+  {
+    MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
+  }
 }
 
 bool Window::InitD3D()
@@ -131,7 +123,6 @@ bool Window::InitD3D()
 
   frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-
   // Create the Back Buffers (render target views) Descriptor Heap
   //  describe an rtv descriptor heap and create
   D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -146,21 +137,6 @@ bool Window::InitD3D()
   {
     return false;
   }
-
-  // Create descriptor heap for SRV
-  D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-  srvHeapDesc.NumDescriptors             = 1;
-  srvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  hr                                     = device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&srvHeap));
-  if (FAILED(hr))
-  {
-    return false;
-  }
-  getSrvHeap = srvHeap.Get();
-  // Store handles
-  cpuHandle = srvHeap->GetCPUDescriptorHandleForHeapStart();
-  gpuHandle = srvHeap->GetGPUDescriptorHandleForHeapStart();
 
   // get the size of a descriptor in this heap
   rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -221,12 +197,9 @@ bool Window::InitD3D()
     return false;
   }
 
-  CD3DX12_ROOT_PARAMETER parameter = {};
-  parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
-
   // create root signature
   CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+  rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
   ID3DBlob* signature;
   hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
@@ -290,8 +263,13 @@ bool Window::InitD3D()
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
                                             {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-                                            {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof(Vertex, color),
+                                            {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, color),
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+
+  //D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+  //    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+  //    {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}, // Correct offset if different
+  //};
 
   // fill out an input layout description structure
   D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -318,20 +296,9 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
   // Create vertex buffer
-  Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-                    {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
-                    {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
-
- 
-  // create constant buffer
-  for (int i = 0; i < frameBufferCount; i++)
-  {
-    const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    const auto constantBufferDesc   = CD3DX12_RESOURCE_DESC::Buffer(sizeof(ConstantBuffer));
-    ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc,
-                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                  IID_PPV_ARGS(&constantBuffer[i])));
-  }
+  //Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+  //                  {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+  //                  {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
 
   // execute the command list to upload the initial assets (triangle data)
   commandList->Close();
@@ -348,7 +315,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    initImgui(device.Get(), frameBufferCount, _hwnd, srvHeap.Get(), cpuHandle, gpuHandle);
+    imguiAdapter = new ImGuiAdapter(device, frameBufferCount, _hwnd);
   }
   else
   {
@@ -372,443 +339,345 @@ bool Window::InitD3D()
   return true;
 }
 
-
-
 void Window::Stop()
 {
-    _running = false;
+  _running = false;
 }
 
 Window::~Window()
 {
-    //Cleanup
-        // wait for the gpu to finish all frames
-        WaitForPreviousFrame();
-        // get swapchain out of full screen before exiting
-        BOOL fs = false;
-        killImgui();
-        if (swapChain->GetFullscreenState(&fs, NULL))
-            swapChain->SetFullscreenState(false, NULL);
-        CloseHandle(fenceEvent);
+  // Cleanup
+  //  wait for the gpu to finish all frames
+  WaitForPreviousFrame();
+  // get swapchain out of full screen before exiting
+  BOOL fs = false;
+  if (swapChain->GetFullscreenState(&fs, NULL))
+    swapChain->SetFullscreenState(false, NULL);
+  CloseHandle(fenceEvent);
 }
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 {
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
-    return rtvHandle;
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex,
+                                          rtvDescriptorSize);
+  return rtvHandle;
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd,
-    UINT msg,
-    WPARAM wParam,
-    LPARAM lParam)
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-    if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
-        return true;
+  extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+  if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
+    return true;
 
-    Window* window = nullptr;
-    if (msg == WM_NCCREATE) {
-        // Set the pointer to window instance
-        CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
-        window = reinterpret_cast<Window*>(pCreate->lpCreateParams);
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
-    }
-    else {
-        // Retrieve the pointer to window instance
-        window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-    }
+  Window* window = nullptr;
+  if (msg == WM_NCCREATE)
+  {
+    // Set the pointer to window instance
+    CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
+    window                = reinterpret_cast<Window*>(pCreate->lpCreateParams);
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
+  }
+  else
+  {
+    // Retrieve the pointer to window instance
+    window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  }
 
-
-    switch (msg)
-    {
+  switch (msg)
+  {
     case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE)
+      if (wParam == VK_ESCAPE)
+      {
+        if (MessageBox(0, L"Are you sure you want to exit?", L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
         {
-            if (MessageBox(0, L"Are you sure you want to exit?",
-                L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
-            {
-                window->Stop();
-                DestroyWindow(hwnd);
-            }
+          window->Stop();
+          DestroyWindow(hwnd);
         }
-        return 0;
+      }
+      return 0;
 
     case WM_DESTROY: // x button on top right corner of window was pressed
-        window->Stop();
-        PostQuitMessage(0);
-        return 0;
-    }
-    return DefWindowProc(hwnd,
-        msg,
-        wParam,
-        lParam);
+      window->Stop();
+      PostQuitMessage(0);
+      return 0;
+  }
+  return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName)
 {
-    if (fullscreen)
-    {
-        HMONITOR hmon = MonitorFromWindow(NULL,
-            MONITOR_DEFAULTTONEAREST);
-        MONITORINFO mi = { sizeof(mi) };
-        GetMonitorInfo(hmon, &mi);
+  if (fullscreen)
+  {
+    HMONITOR    hmon = MonitorFromWindow(NULL, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi   = {sizeof(mi)};
+    GetMonitorInfo(hmon, &mi);
 
-        _width = mi.rcMonitor.right - mi.rcMonitor.left;
-        _height = mi.rcMonitor.bottom - mi.rcMonitor.top;
-    }
+    _width  = mi.rcMonitor.right - mi.rcMonitor.left;
+    _height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+  }
 
-    WNDCLASSEX wc;
+  WNDCLASSEX wc;
 
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.cbClsExtra = NULL;
-    wc.cbWndExtra = NULL;
-    wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
-    wc.lpszMenuName = NULL;
-    wc.lpszClassName = windowName;
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+  wc.cbSize        = sizeof(WNDCLASSEX);
+  wc.style         = CS_HREDRAW | CS_VREDRAW;
+  wc.lpfnWndProc   = WndProc;
+  wc.cbClsExtra    = NULL;
+  wc.cbWndExtra    = NULL;
+  wc.hInstance     = hInstance;
+  wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+  wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
+  wc.lpszMenuName  = NULL;
+  wc.lpszClassName = windowName;
+  wc.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
 
-    if (!RegisterClassEx(&wc))
-    {
-        MessageBox(NULL, L"Error registering class",
-            L"Error", MB_OK | MB_ICONERROR);
-        return false;
-    }
+  if (!RegisterClassEx(&wc))
+  {
+    MessageBox(NULL, L"Error registering class", L"Error", MB_OK | MB_ICONERROR);
+    return false;
+  }
 
-     _hwnd = CreateWindowEx(NULL,
-        windowName,
-        windowName, //windowTitle
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        _width, _height,
-        NULL,
-        NULL,
-        hInstance,
-        this);
+  _hwnd =
+      CreateWindowEx(NULL, windowName,
+                     windowName, // windowTitle
+                     WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, _width, _height, NULL, NULL, hInstance, this);
 
-    if (!_hwnd)
-    {
-        MessageBox(NULL, L"Error creating window",
-            L"Error", MB_OK | MB_ICONERROR);
-        return false;
-    }
+  if (!_hwnd)
+  {
+    MessageBox(NULL, L"Error creating window", L"Error", MB_OK | MB_ICONERROR);
+    return false;
+  }
 
-    if (fullscreen)
-    {
-        SetWindowLong(_hwnd, GWL_STYLE, 0);
-    }
+  if (fullscreen)
+  {
+    SetWindowLong(_hwnd, GWL_STYLE, 0);
+  }
 
-    ShowWindow(_hwnd, ShowWnd);
-    UpdateWindow(_hwnd);
+  ShowWindow(_hwnd, ShowWnd);
+  UpdateWindow(_hwnd);
 
-    return true;
+  return true;
 }
-
 
 void Window::Render()
 {
-    HRESULT hr;
+  HRESULT hr;
 
-    UpdatePipeline(100.0f, 0.1f); // update the pipeline by sending commands to the commandqueue
-    // create an array of command lists (only one command list here)
-    ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
+  UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
+  // create an array of command lists (only one command list here)
+  ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
-    // execute the array of command lists
-    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+  // execute the array of command lists
+  commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-    if (FAILED(hr))
-    {
-        _running = false;
-    }
+  hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
+  if (FAILED(hr))
+  {
+    _running = false;
+  }
 
-    // present the current backbuffer
-    hr = swapChain->Present(0, 0);
-    if (FAILED(hr))
-    {
-        _running = false;
-    }
+  // present the current backbuffer
+  hr = swapChain->Present(0, 0);
+  if (FAILED(hr))
+  {
+    _running = false;
+  }
 }
 
 void Window::mainloop()
 {
-    MSG msg;
-    ZeroMemory(&msg, sizeof(MSG));
+  MSG msg;
+  ZeroMemory(&msg, sizeof(MSG));
 
-    quaVerti = prepareTriangle();
+   quaVerti = prepareTriangle();
 
-    InitializeVertexBuffer(quaVerti);
+  InitializeVertexBuffer(quaVerti);
 
-    UpdateVertexBuffer(quaVerti);
-   
-  
+  UpdateVertexBuffer(quaVerti);
 
-    
-
-    while (_running)
+  while (_running)
+  {
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
     {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            if (msg.message == WM_QUIT)
-            {
-                _running = false;
-                break;
-            }
+      if (msg.message == WM_QUIT)
+      {
+        _running = false;
+        break;
+      }
 
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        
-        if (!_running) {
-            break;
-        }
-
-        startMainImgui();
-
-        Render(); // execute the command queue
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
-}
-//rotation variables and mouse sensitivity
-static float alphaX = 0.0f;
-static float alphaY = 0.0f;
-static float alphaZ = 0.0f;
 
-const float mouseSensX = 0.005f;
-const float mouseSensY = 0.005f;
+    if (!_running)
+    {
+      break;
+    }
 
-// Store previous mouse position
-static POINT prevMousePos = {0, 0};
-void UpdateRotationFromMouse()
-{
-  if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
-  {
-    POINT currentMousePos;
-    GetCursorPos(&currentMousePos);
+    
 
-    // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePos.x;
-    int deltaY = currentMousePos.y - prevMousePos.y;
-
-    // Update rotation angles based on mouse movement
-    alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
-    alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
-    //clamp angles
-    alphaX = glm::mod(alphaX, glm::two_pi<float>());
-    alphaY = glm::mod(alphaY, glm::two_pi<float>());
-    // Update previous mouse position
-    prevMousePos = currentMousePos;
-  }
-   else
-  {
-    // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePos);
+    Render(); // execute the command queue
   }
 }
-//Call function to initialize previous mouse pos
-void InitializeMousePosition()
+
+void Window::UpdatePipeline()
 {
-  GetCursorPos(&prevMousePos);
-}
+  HRESULT hr;
 
-void Window::UpdatePipeline(float angle, float aspectRatio)
-{
-    HRESULT hr;
-    
-    // wait for the gpu to finish with the command allocator before we reset it
-    WaitForPreviousFrame();
-    
-    // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list was stored in
-    ThrowIfFailed(commandAllocator[frameIndex]->Reset());
+  // wait for the gpu to finish with the command allocator before we reset it
+  WaitForPreviousFrame();
+
+  // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list
+  // was stored in
+  ThrowIfFailed(commandAllocator[frameIndex]->Reset());
+
+  // reset the command list
+  ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
+
+  // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
+  //  transition the "frameIndex" render target from the present state to the render target state so the command list
+  //  draws to it starting from here
+  auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(
+      renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+  commandList->ResourceBarrier(1, &resBarrierTransition);
+
+  draw();
+  // imgui command list update here
   
-    // reset the command list
-    ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
+  imguiAdapter->startMainImGui();
+  ImGui::ShowDemoWindow();
+  imguiAdapter->renderImGui();
+  imguiAdapter->commandList(commandList);
 
+  // transition the "frameIndex" render target from the render target state to the present state
+  auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(
+      renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+  commandList->ResourceBarrier(1, &resBarrierTransPresent);
 
-
-  
-      // Update rotation angles based on mouse movement
-      UpdateRotationFromMouse();
-
-      // Create individual rotation matrices for each axis
-      glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
-      glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
-      glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
-
-      // Combine the rotations
-      glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
-
-      // Update the constant buffer with the combined rotation matrix
-      UpdateConstantBuffer(rotationMat);
-      // Call this onc  to set the initial mouse position
-      InitializeMousePosition();
-     //zuvor verwendete berechnungen
-  //    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-   //   glm::mat4 viewMatrix =
-   //   glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-   //   glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-   //   glm::mat4 finalMat         = projectionMatrix * viewMatrix * modelMatrix * rotationMat;
-    
-
-    
- 
-    // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
-    //  transition the "frameIndex" render target from the present state to the render target state so the command list draws to it starting from here
-    auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-    commandList->ResourceBarrier(1, &resBarrierTransition);
-    
-
-    draw();
-    commandList->SetDescriptorHeaps(1, &getSrvHeap);
-    endMainImgui(commandList.Get());
-    
-    // transition the "frameIndex" render target from the render target state to the present state
-    auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-    commandList->ResourceBarrier(1, &resBarrierTransPresent);
-
-    ThrowIfFailed(commandList->Close());
-    
+  ThrowIfFailed(commandList->Close());
 }
 
 void Window::WaitForPreviousFrame()
 {
-    HRESULT hr;
+  HRESULT hr;
 
-    // swap the current rtv buffer index so we draw on the correct buffer
-    frameIndex = swapChain->GetCurrentBackBufferIndex();
+  // swap the current rtv buffer index so we draw on the correct buffer
+  frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-    // if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
-    // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
-    if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
-    {
-        // fence create an event which is signaled once the fence's current value is "fenceValue"
-        hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
-        if (FAILED(hr))
-        {
-            _running = false;
-        }
-
-        // wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
-        // has reached "fenceValue", we know the command queue has finished executing
-        WaitForSingleObject(fenceEvent, INFINITE);
-    }
-
-    // increment fenceValue for next frame
-    fenceValue[frameIndex]++;
-}
-
-
-void Window::UpdateVertexBuffer(const std::vector<Vertex>& vertices) {
-    if (!vertexBuffer) {
-        throw std::runtime_error("Vertex buffer is not initialized.");
-    }
-
-    if (vertices.empty()) {
-        throw std::runtime_error("Vertex data is empty.");
-    }
-    
-    size_t newValue = vertices.size() * sizeof(Vertex);
-
-    Vertex* vertexDataBegin = nullptr;
-    HRESULT hr = vertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataBegin));
-    if (FAILED(hr)) {
-        throw std::runtime_error("Failed to map vertex buffer.");
-    }
-
-    memcpy(vertexDataBegin, vertices.data(), newValue);
-    vertexBuffer->Unmap(0, nullptr);
-
-    vertexBufferView.SizeInBytes = static_cast<UINT>(newValue);
-}
-
-
-bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
-    try {
-        vBufferSize = vertices.size() * sizeof(Vertex);
-        // Create default heap for the vertex buffer
-        auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
-
-        HRESULT hr = device->CreateCommittedResource(
-            &heapProperties,
-            D3D12_HEAP_FLAG_NONE,
-            &resourceDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&vertexBuffer));
-        if (FAILED(hr)) {
-            throw std::runtime_error("Failed to create vertex buffer.");
-        }
-        vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
-
-        // Create upload heap for vertex buffer
-        auto heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        ID3D12Resource* vBufferUploadHeap;
-        hr = device->CreateCommittedResource(
-            &heapPropertiesUpload,
-            D3D12_HEAP_FLAG_NONE,
-            &resourceDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&vBufferUploadHeap));
-        if (FAILED(hr)) {
-            throw std::runtime_error("Failed to create vertex buffer upload heap.");
-        }
-        vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
-
-        // Copy vertex data to upload heap
-        D3D12_SUBRESOURCE_DATA vertexData = {};
-        vertexData.pData = vertices.data();
-        vertexData.RowPitch = vBufferSize;
-        vertexData.SlicePitch = vBufferSize;
-
-        // Schedule copy from upload heap to default heap
-        UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
-
-        // Transition vertex buffer to vertex buffer state
-        auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-        commandList->ResourceBarrier(1, &resBarrierVertexBuffer);
-
-        // Execute the command list to upload vertex data
-        commandList->Close();
-        ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
-        commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-        // Increment fence value
-        fenceValue[frameIndex]++;
-        hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-        if (FAILED(hr)) {
-            _running = false;
-            return false;
-        }
-
-        // Create vertex buffer view
-        vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
-        vertexBufferView.StrideInBytes = sizeof(Vertex);
-        vertexBufferView.SizeInBytes = vBufferSize;
-
-        return true;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error initializing vertex buffer: " << e.what() << std::endl;
-        return false;
-    }
-}
-
-
-void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
-{
-  if (!constantBuffer[frameIndex])
+  // if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
+  // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
+  if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
   {
-    throw std::runtime_error("Constant buffer is not initialized.");
-  }
-  ConstantBuffer* cbDataBegin = nullptr;
-  ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
+    // fence create an event which is signaled once the fence's current value is "fenceValue"
+    hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
+    if (FAILED(hr))
+    {
+      _running = false;
+    }
 
-  cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
-  constantBuffer[frameIndex]->Unmap(0, nullptr);
+    // wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
+    // has reached "fenceValue", we know the command queue has finished executing
+    WaitForSingleObject(fenceEvent, INFINITE);
+  }
+
+  // increment fenceValue for next frame
+  fenceValue[frameIndex]++;
+}
+
+void Window::UpdateVertexBuffer(const std::vector<Vertex>& vertices)
+{
+  if (!vertexBuffer)
+  {
+    throw std::runtime_error("Vertex buffer is not initialized.");
+  }
+
+  if (vertices.empty())
+  {
+    throw std::runtime_error("Vertex data is empty.");
+  }
+
+  size_t newValue = vertices.size() * sizeof(Vertex);
+
+  Vertex* vertexDataBegin = nullptr;
+  HRESULT hr              = vertexBuffer->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataBegin));
+  if (FAILED(hr))
+  {
+    throw std::runtime_error("Failed to map vertex buffer.");
+  }
+
+  memcpy(vertexDataBegin, vertices.data(), newValue);
+  vertexBuffer->Unmap(0, nullptr);
+
+  vertexBufferView.SizeInBytes = static_cast<UINT>(newValue);
+}
+
+bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
+{
+  try
+  {
+    vBufferSize = vertices.size() * sizeof(Vertex);
+    // Create default heap for the vertex buffer
+    auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
+
+    HRESULT hr =
+        device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexBuffer));
+    if (FAILED(hr))
+    {
+      throw std::runtime_error("Failed to create vertex buffer.");
+    }
+    vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
+
+    // Create upload heap for vertex buffer
+    auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    ID3D12Resource* vBufferUploadHeap;
+    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vBufferUploadHeap));
+    if (FAILED(hr))
+    {
+      throw std::runtime_error("Failed to create vertex buffer upload heap.");
+    }
+    vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
+
+    // Copy vertex data to upload heap
+    D3D12_SUBRESOURCE_DATA vertexData = {};
+    vertexData.pData                  = vertices.data();
+    vertexData.RowPitch               = vBufferSize;
+    vertexData.SlicePitch             = vBufferSize;
+
+    // Schedule copy from upload heap to default heap
+    UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
+
+    // Transition vertex buffer to vertex buffer state
+    auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                                       D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    commandList->ResourceBarrier(1, &resBarrierVertexBuffer);
+
+    // Execute the command list to upload vertex data
+    commandList->Close();
+    ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
+    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // Increment fence value
+    fenceValue[frameIndex]++;
+    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
+    if (FAILED(hr))
+    {
+      _running = false;
+      return false;
+    }
+
+    // Create vertex buffer view
+    vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+    vertexBufferView.StrideInBytes  = sizeof(Vertex);
+    vertexBufferView.SizeInBytes    = vBufferSize;
+
+    return true;
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Error initializing vertex buffer: " << e.what() << std::endl;
+    return false;
+  }
 }
