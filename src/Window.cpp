@@ -644,7 +644,8 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
 
       // Update the constant buffer with the combined rotation matrix
       UpdateConstantBuffer(rotationMat);
-
+      // Call this onc  to set the initial mouse position
+      InitializeMousePosition();
      //zuvor verwendete berechnungen
   //    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
    //   glm::mat4 viewMatrix =
@@ -652,86 +653,6 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
    //   glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
    //   glm::mat4 finalMat         = projectionMatrix * viewMatrix * modelMatrix * rotationMat;
     
-
-    // Call this once at the beginning of your application to set the initial mouse position
-    InitializeMousePosition();
-
-
-
-///////////////STUHL MIT WASD DREHEN###############################################################
-    //// Define initial rotation angles
-    //static float alphaX = 0.0f;
-    //static float alphaY = 0.0f;
-    //static float alphaZ = 0.0f;
-
-    //// Handle key inputs
-    //if (GetAsyncKeyState('A'))
-    //{
-    //  alphaY += 0.01f;
-    //}
-    //else if (GetAsyncKeyState('D'))
-    //{
-    //  alphaY -= 0.01f;
-    //}
-
-    //if (GetAsyncKeyState('W'))
-    //{
-    //  alphaX += 0.01f;
-    //}
-    //else if (GetAsyncKeyState('S'))
-    //{
-    //  alphaX -= 0.01f;
-    //}
-
-    //if (GetAsyncKeyState('Q'))
-    //{
-    //  alphaZ += 0.01f;
-    //}
-    //else if (GetAsyncKeyState('E'))
-    //{
-    //  alphaZ -= 0.01f;
-    //}
-
-    //// Create individual rotation matrices for each axis
-    //glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
-    //glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
-    //glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    //// Combine the rotations
-    //glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
-
-    //// Update the constant buffer with the combined rotation matrix
-    //UpdateConstantBuffer(rotationMat);
-
-    //// The rest of your code remains the same
-    //glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-    //glm::mat4 viewMatrix =
-    //    glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    //glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-    //glm::mat4 finalMat         = projectionMatrix * viewMatrix * modelMatrix * rotationMat;
-/////STUHL MIT WASD DREHEN ###################################################################################
-// 
-// 
-// 
-// 
-  //     glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
- //   glm::mat4 viewMatrix =
-  //      glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
- //   glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-  //  glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
-
-//    static float alpha = 0.f; /// TODO Berkan, remove this again! This is only for testing
-
- //   if (GetAsyncKeyState('A'))
- //   {
-  //    alpha += 0.001f;
-  //  }
- //   else if (GetAsyncKeyState('D'))
- //   {
- //     alpha -= 0.001f;
- //   }
-
-    // UpdateConstantBuffer(glm::rotate(alpha , glm::vec3(0,1,0)));
 
     
  
