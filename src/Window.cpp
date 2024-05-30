@@ -573,6 +573,47 @@ void Window::mainloop()
         Render(); // execute the command queue
     }
 }
+//rotation variables and mouse sensitivity
+static float alphaX = 0.0f;
+static float alphaY = 0.0f;
+static float alphaZ = 0.0f;
+
+const float mouseSensX = 0.005f;
+const float mouseSensY = 0.005f;
+
+// Store previous mouse position
+static POINT prevMousePos = {0, 0};
+void UpdateRotationFromMouse()
+{
+  if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
+  {
+    POINT currentMousePos;
+    GetCursorPos(&currentMousePos);
+
+    // Calculate the mouse movement delta
+    int deltaX = currentMousePos.x - prevMousePos.x;
+    int deltaY = currentMousePos.y - prevMousePos.y;
+
+    // Update rotation angles based on mouse movement
+    alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
+    alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
+    //clamp angles
+    alphaX = glm::mod(alphaX, glm::two_pi<float>());
+    alphaY = glm::mod(alphaY, glm::two_pi<float>());
+    // Update previous mouse position
+    prevMousePos = currentMousePos;
+  }
+   else
+  {
+    // Update previous mouse position when button is not pressed to avoid sudden jumps
+    GetCursorPos(&prevMousePos);
+  }
+}
+//Call function to initialize previous mouse pos
+void InitializeMousePosition()
+{
+  GetCursorPos(&prevMousePos);
+}
 
 void Window::UpdatePipeline(float angle, float aspectRatio)
 {
@@ -587,14 +628,111 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
     // reset the command list
     ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
-    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 viewMatrix =
-    glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-    glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
 
-    static float alpha = 0.f; // TODO Berkan, remove this again! This is only for testing
-    UpdateConstantBuffer(glm::rotate(alpha += 0.001, glm::vec3(0,1,0)));
+
+  
+      // Update rotation angles based on mouse movement
+      UpdateRotationFromMouse();
+
+      // Create individual rotation matrices for each axis
+      glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
+      glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
+      glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
+
+      // Combine the rotations
+      glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
+
+      // Update the constant buffer with the combined rotation matrix
+      UpdateConstantBuffer(rotationMat);
+
+     //zuvor verwendete berechnungen
+  //    glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+   //   glm::mat4 viewMatrix =
+   //   glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+   //   glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+   //   glm::mat4 finalMat         = projectionMatrix * viewMatrix * modelMatrix * rotationMat;
+    
+
+    // Call this once at the beginning of your application to set the initial mouse position
+    InitializeMousePosition();
+
+
+
+///////////////STUHL MIT WASD DREHEN###############################################################
+    //// Define initial rotation angles
+    //static float alphaX = 0.0f;
+    //static float alphaY = 0.0f;
+    //static float alphaZ = 0.0f;
+
+    //// Handle key inputs
+    //if (GetAsyncKeyState('A'))
+    //{
+    //  alphaY += 0.01f;
+    //}
+    //else if (GetAsyncKeyState('D'))
+    //{
+    //  alphaY -= 0.01f;
+    //}
+
+    //if (GetAsyncKeyState('W'))
+    //{
+    //  alphaX += 0.01f;
+    //}
+    //else if (GetAsyncKeyState('S'))
+    //{
+    //  alphaX -= 0.01f;
+    //}
+
+    //if (GetAsyncKeyState('Q'))
+    //{
+    //  alphaZ += 0.01f;
+    //}
+    //else if (GetAsyncKeyState('E'))
+    //{
+    //  alphaZ -= 0.01f;
+    //}
+
+    //// Create individual rotation matrices for each axis
+    //glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
+    //glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    //// Combine the rotations
+    //glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
+
+    //// Update the constant buffer with the combined rotation matrix
+    //UpdateConstantBuffer(rotationMat);
+
+    //// The rest of your code remains the same
+    //glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 viewMatrix =
+    //    glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    //glm::mat4 finalMat         = projectionMatrix * viewMatrix * modelMatrix * rotationMat;
+/////STUHL MIT WASD DREHEN ###################################################################################
+// 
+// 
+// 
+// 
+  //     glm::mat4 modelMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+ //   glm::mat4 viewMatrix =
+  //      glm::lookAt(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+ //   glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+  //  glm::mat4 rotationMat      = projectionMatrix * viewMatrix * modelMatrix;
+
+//    static float alpha = 0.f; /// TODO Berkan, remove this again! This is only for testing
+
+ //   if (GetAsyncKeyState('A'))
+ //   {
+  //    alpha += 0.001f;
+  //  }
+ //   else if (GetAsyncKeyState('D'))
+ //   {
+ //     alpha -= 0.001f;
+ //   }
+
+    // UpdateConstantBuffer(glm::rotate(alpha , glm::vec3(0,1,0)));
+
     
  
     // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
@@ -739,6 +877,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices) {
         return false;
     }
 }
+
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
 {
