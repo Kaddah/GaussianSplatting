@@ -554,6 +554,11 @@ const float mouseSensY = 0.005f;
 static POINT prevMousePos = {0, 0};
 void         UpdateRotationFromMouse()
 {
+  // Check if mouse is hovering over ImGui window
+  if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
+  {
+    return;
+  }
   if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
   {
     POINT currentMousePos;
