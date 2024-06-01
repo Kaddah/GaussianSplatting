@@ -207,14 +207,12 @@ bool Window::InitD3D()
     return false;
   }
 
-
   CD3DX12_ROOT_PARAMETER parameter = {};
   parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_ALL);
 
   CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   // create root signature
   rootSignatureDesc.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
 
   ID3DBlob* signature;
   hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
@@ -281,10 +279,11 @@ bool Window::InitD3D()
                                             {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, color),
                                              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
 
-  //D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
-  //    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-  //    {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}, // Correct offset if different
-  //};
+  // D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+  //     {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+  //     {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}, // Correct
+  //     offset if different
+  // };
 
   // fill out an input layout description structure
   D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -311,15 +310,13 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
   // Create vertex buffer
-  //Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
+  // Vertex vList[] = {{glm::vec3(0.0f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
   //                  {glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)},
   //                  {glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)}};
 
   // execute the command list to upload the initial assets (triangle data)
 
-
-
-    // create constant buffer
+  // create constant buffer
   for (int i = 0; i < frameBufferCount; i++)
   {
     const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -517,7 +514,7 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-   quaVerti = prepareTriangle();
+  quaVerti = prepareTriangle();
 
   InitializeVertexBuffer(quaVerti);
 
@@ -541,8 +538,6 @@ void Window::mainloop()
     {
       break;
     }
-
-    
 
     Render(); // execute the command queue
   }
@@ -602,8 +597,7 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
   // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
-
-   UpdateRotationFromMouse();
+  UpdateRotationFromMouse();
 
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -626,9 +620,10 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
 
   draw();
   // imgui command list update here
-  
+
   imguiAdapter->startMainImGui();
-  ImGui::ShowDemoWindow();
+  // ImGui::ShowDemoWindow();
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
@@ -773,7 +768,6 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
   }
   ConstantBuffer* cbDataBegin = nullptr;
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
-  cbDataBegin->rotationMat = rotationMat;// Update the MVP matrix in the constant buffer
+  cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
   constantBuffer[frameIndex]->Unmap(0, nullptr);
-
 }

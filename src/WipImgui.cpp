@@ -36,7 +36,7 @@ void ImGuiAdapter::startMainImGui()
 {
   ImGui_ImplDX12_NewFrame();
   ImGui_ImplWin32_NewFrame();
-  ImGui::NewFrame();  
+  ImGui::NewFrame();
 }
 void ImGuiAdapter::renderImGui()
 {
@@ -45,9 +45,21 @@ void ImGuiAdapter::renderImGui()
 void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
   commandList->SetDescriptorHeaps(1, imguiSRVDescriptorHeap.GetAddressOf());
-  
+
   if (auto drawData = ImGui::GetDrawData())
   {
     ImGui_ImplDX12_RenderDrawData(drawData, commandList.Get());
   }
+}
+void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ)
+{
+  ImGui::Begin("Gaussian Splatting");
+  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", alphaX, alphaY, alphaZ);
+  if (ImGui::Button("Reset Camera"))
+  {
+    alphaX = 0.0f;
+    alphaY = 0.0f;
+    alphaZ = 0.0f;
+  }
+  ImGui::End();
 }
