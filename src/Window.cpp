@@ -488,7 +488,7 @@ void Window::Render()
 {
   HRESULT hr;
 
-  UpdatePipeline(100.0f, 0.1f); // update the pipeline by sending commands to the commandqueue
+  UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
   // create an array of command lists (only one command list here)
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
@@ -543,16 +543,32 @@ void Window::mainloop()
   }
 }
 // rotation variables and mouse sensitivity
-static float alphaX = 0.0f;
-static float alphaY = 0.0f;
-static float alphaZ = 0.0f;
+// rotation variables and mouse sensitivity
+float alphaX = 0.0f;
+float alphaY = 0.0f;
+float alphaZ = 0.0f;
 
 const float mouseSensX = 0.005f;
 const float mouseSensY = 0.005f;
 
 // Store previous mouse position
 static POINT prevMousePos = {0, 0};
-void         UpdateRotationFromMouse()
+
+// Camera position and movement variables
+glm::vec3 cameraPos(0.0f, 0.0f, 5.0f);
+glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
+
+float     cameraSpeed = 0.05f; // Adjust this value to change the movement speed
+float     fov         = 45.0f; // Initial zoom level (FOV)
+
+float nearPlane = 0.1f;
+float farPlane  = 100.0f;
+
+float yaw   = -90.0f; // Initialize to face towards negative z-axis
+float pitch = 0.0f;
+
+void UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
@@ -572,8 +588,7 @@ void         UpdateRotationFromMouse()
     alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
     alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
     // clamp angles
-    alphaX = glm::mod(alphaX, glm::two_pi<float>());
-    alphaY = glm::mod(alphaY, glm::two_pi<float>());
+
     // Update previous mouse position
     prevMousePos = currentMousePos;
   }
@@ -588,7 +603,65 @@ void InitializeMousePosition()
 {
   GetCursorPos(&prevMousePos);
 }
-void Window::UpdatePipeline(float angle, float aspectRatio)
+
+void UpdateCameraPosition()
+{
+  if (GetAsyncKeyState('W') & 0x8000)
+  {
+    cameraPos += cameraSpeed * cameraUp; // Move up //*camerafront to go forwards
+  }
+  if (GetAsyncKeyState('S') & 0x8000)  //*camerafront to go backwards
+  {
+    cameraPos -= cameraSpeed * cameraUp; // Move down
+  }
+  if (GetAsyncKeyState('A') & 0x8000)
+  {
+    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // Move left
+  }
+  if (GetAsyncKeyState('D') & 0x8000)
+  {
+    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // Move right
+  }
+}
+
+void UpdateCameraDirection()
+{
+    ///COULD ALSO NOT HOLD RIGHT BUTTON, BUT CURRENTLY NOT WORKING, IF NO BUTTON OPTION CHAIR DISSAPEARS, ALSO DISAPPEARS WHEN CLICKING RBUTTON 
+  if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
+  {
+    POINT currentMousePos;
+    GetCursorPos(&currentMousePos);
+
+    // Calculate the mouse movement delta
+    int deltaX = currentMousePos.x - prevMousePos.x;
+    int deltaY = currentMousePos.y - prevMousePos.y;
+
+    // Update camera front vector based on mouse movement
+    float sensitivity = 0.1f;
+    float yaw         = deltaX * sensitivity;
+    float pitch       = deltaY * sensitivity;
+
+    if (pitch > 89.0f)
+      pitch = 89.0f;
+    if (pitch < -89.0f)
+      pitch = -89.0f;
+
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
+
+    // Update previous mouse position
+    prevMousePos = currentMousePos;
+  }
+  else
+  {
+    // Update previous mouse position when button is not pressed to avoid sudden jumps
+    GetCursorPos(&prevMousePos);
+  }
+}
+void Window::UpdatePipeline()
 {
   HRESULT hr;
 
@@ -603,7 +676,10 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
   UpdateRotationFromMouse();
-
+  UpdateCameraPosition();
+  UpdateCameraDirection();
+  //get aspectratio
+  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -612,10 +688,17 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
   // Combine the rotations
   glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
 
-  // Update the constant buffer with the combined rotation matrix
-  UpdateConstantBuffer(rotationMat);
+  glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+  // near plane 0.1f farplane 100.0f
+  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
+  // Combine matrices to get mvp
+  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
+
+  // Update the constant buffer with mvp
+  UpdateConstantBuffer(mvpMat);
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
+
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
   //  draws to it starting from here

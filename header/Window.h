@@ -72,5 +72,5 @@ protected:
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
-  void UpdatePipeline(float angle, float aspectRatio);
+  void UpdatePipeline();
 };
