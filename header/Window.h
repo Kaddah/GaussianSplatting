@@ -79,4 +79,12 @@ protected:
 
 	void UpdatePipeline(float angle, float aspectRatio);
 
+<<<<<<< Updated upstream
 };
+=======
+  bool InitD3D();
+  bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
+
+  void UpdatePipeline();
+};
+>>>>>>> Stashed changes
