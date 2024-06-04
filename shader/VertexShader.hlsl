@@ -6,13 +6,13 @@ cbuffer ConstantBuffer : register(b0)
 struct VS_INPUT
 {
     float4 pos : POSITION;
-    float4 color: COLOR;
+    float4 color : COLOR;
 };
 
 struct VS_OUTPUT
 {
-    float4 pos: SV_POSITION;
-    float4 color: COLOR;
+    float4 pos : SV_POSITION;
+    float4 color : COLOR;
 };
 
 VS_OUTPUT main(VS_INPUT input)
