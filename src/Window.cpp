@@ -638,8 +638,8 @@ void UpdateCameraDirection()
 
     // Update camera front vector based on mouse movement
     float sensitivity = 0.1f;
-    float yaw         = deltaX * sensitivity;
-    float pitch       = deltaY * sensitivity;
+     yaw         += deltaX * sensitivity;
+     pitch       -= deltaY * sensitivity;
 
     if (pitch > 89.0f)
       pitch = 89.0f;
