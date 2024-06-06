@@ -8,8 +8,6 @@ std::wstring AnsiToWString(const std::string& str) {
     return wstrTo;
 }
 
-
-
 DxException::DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber)
     : ErrorCode(hr), FunctionName(functionName), Filename(filename), LineNumber(lineNumber) {}
 
@@ -19,5 +17,3 @@ const char* DxException::what() const noexcept {
         " at line " + std::to_string(LineNumber);
     return whatBuffer.c_str();
 }
-
-
