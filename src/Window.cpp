@@ -4,6 +4,7 @@
 #include <dxgi1_4.h>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 #include <wrl/client.h>
 
 #include "Window.h"
@@ -559,7 +560,7 @@ glm::vec3 cameraPos(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
-float     cameraSpeed = 0.02f; // Adjust this value to change the movement speed
+float     cameraSpeed = 1.0f; // Camera speed in meters per second
 float     fov         = 45.0f; // Initial zoom level (FOV)
 
 float nearPlane = 0.1f;
@@ -604,31 +605,38 @@ void InitializeMousePosition()
   GetCursorPos(&prevMousePos);
 }
 
-void UpdateCameraPosition()
+void UpdateCameraPosition()// TODO move this function to be a member of Window class
 {
+  static auto before = std::chrono::high_resolution_clock::now(); // TODO move this variable into Window class as member
+  auto        now    = std::chrono::high_resolution_clock::now();
+  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
+  before             = now;
+  
   if (GetAsyncKeyState('W') & 0x8000)
   {
-    cameraPos += cameraSpeed * cameraFront; // Move up //*camerafront to go forwards
+    cameraPos += cameraSpeed * cameraFront * deltaS;
   }
-  if (GetAsyncKeyState('S') & 0x8000)  //*camerafront to go backwards
+  if (GetAsyncKeyState('S') & 0x8000)
   {
-    cameraPos -= cameraSpeed * cameraFront; // Move down
+    cameraPos -= cameraSpeed * cameraFront * deltaS; // Move down
   }
   if (GetAsyncKeyState (VK_LSHIFT) & 0x8000) //
   {
-    cameraPos -= cameraSpeed * cameraUp; // Move down
+    cameraPos -= cameraSpeed * cameraUp * deltaS; // Move down
   }
   if (GetAsyncKeyState(VK_SPACE) & 0x8000) //
   {
-    cameraPos += cameraSpeed * cameraUp; // Move down
+    cameraPos += cameraSpeed * cameraUp * deltaS; // Move down
   }
+
+  const glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
   if (GetAsyncKeyState('A') & 0x8000)
   {
-    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // Move left
+    cameraPos -= cameraRight * cameraSpeed * deltaS; // Move left
   }
   if (GetAsyncKeyState('D') & 0x8000)
   {
-    cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // Move right
+    cameraPos += cameraRight * cameraSpeed * deltaS; // Move right
   }
 }
 
