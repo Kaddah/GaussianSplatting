@@ -234,10 +234,23 @@ bool Window::InitD3D()
   ID3DBlob* errorBuff;    // a buffer holding the error data if any
   hr = D3DCompileFromFile(L"../shader/VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0",
                           D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vertexShader, &errorBuff);
+
   if (FAILED(hr))
   {
-    OutputDebugStringA((char*)errorBuff->GetBufferPointer());
-    return false;
+    if (errorBuff)
+    {
+      std::cerr << "Shader compilation failed:\n" << (char*)errorBuff->GetBufferPointer() << std::endl;
+      return false;
+    }
+    else
+    {
+      std::cerr << "Shader compilation failed with HRESULT: " << hr << std::endl;
+      return false;
+    }
+  }
+  else
+  {
+    std::cout << "Shader compiled successfully." << std::endl;
   }
 
   // fill out a shader bytecode structure (which is basically just a pointer to the shader bytecode and the size of the
