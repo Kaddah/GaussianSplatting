@@ -559,7 +559,7 @@ glm::vec3 cameraPos(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
-float     cameraSpeed = 0.05f; // Adjust this value to change the movement speed
+float     cameraSpeed = 0.02f; // Adjust this value to change the movement speed
 float     fov         = 45.0f; // Initial zoom level (FOV)
 
 float nearPlane = 0.1f;
@@ -608,11 +608,19 @@ void UpdateCameraPosition()
 {
   if (GetAsyncKeyState('W') & 0x8000)
   {
-    cameraPos += cameraSpeed * cameraUp; // Move up //*camerafront to go forwards
+    cameraPos += cameraSpeed * cameraFront; // Move up //*camerafront to go forwards
   }
   if (GetAsyncKeyState('S') & 0x8000)  //*camerafront to go backwards
   {
+    cameraPos -= cameraSpeed * cameraFront; // Move down
+  }
+  if (GetAsyncKeyState (VK_LSHIFT) & 0x8000) //
+  {
     cameraPos -= cameraSpeed * cameraUp; // Move down
+  }
+  if (GetAsyncKeyState(VK_SPACE) & 0x8000) //
+  {
+    cameraPos += cameraSpeed * cameraUp; // Move down
   }
   if (GetAsyncKeyState('A') & 0x8000)
   {
