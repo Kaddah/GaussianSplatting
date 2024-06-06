@@ -38,27 +38,14 @@ void GaussianRenderer::draw()
     commandList->RSSetScissorRects(1, &scissorRect);                          
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); 
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);            
-    
+     commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());  
     commandList->DrawInstanced(getQuadVertices().size(), 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
 }
     
 std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
-    m_quads.clear();
     //#12 Access baseVertices from PLY file
     const std::vector<Vertex>m_Vertices = getVertices();
-
-       //#12 Generate quad cloud mesh - MH
-    std::vector <GeoGenerator::MeshData> quads = quadGen.GenerateQuadsForVertices(m_vertices, quadSize);
-
-    uint32_t currentIndexOffset = 0;
-    for (const auto& quad : quads) {
-        m_quads.insert(m_quads.end(), quad.vertices.begin(), quad.vertices.end());
-        for (auto index : quad.indices) {
-            quadIndices.push_back(index + currentIndexOffset);
-        }
-        currentIndexOffset += quad.vertices.size(); // Update offset for next quad
-    }
-  return m_quads;
+  return m_Vertices;
 }
 
 // Setter method implementation
