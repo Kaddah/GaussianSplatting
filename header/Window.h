@@ -8,6 +8,7 @@
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
 #include <wrl/client.h>
+#include <chrono>
 
 using Microsoft::WRL::ComPtr;
 
@@ -31,6 +32,7 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
+  
   ~Window();
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
@@ -68,6 +70,10 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   ImGuiAdapter* imguiAdapter;
+ 
+
+
+  
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);

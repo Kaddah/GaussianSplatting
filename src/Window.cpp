@@ -35,6 +35,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _hwnd(NULL)
     , _running(true)
     , _fullScreen(fullScreen) // initializer list
+    
 {
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
@@ -553,7 +554,8 @@ const float mouseSensX = 0.005f;
 const float mouseSensY = 0.005f;
 
 // Store previous mouse position
-static POINT prevMousePos = {0, 0};
+static POINT prevMousePosRotation = {0, 0};
+static POINT prevMousePosCameraDirection = {0, 0};
 
 // Camera position and movement variables
 glm::vec3 cameraPos(0.0f, 0.0f, 5.0f);
@@ -582,8 +584,8 @@ void UpdateRotationFromMouse()
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePos.x;
-    int deltaY = currentMousePos.y - prevMousePos.y;
+    int deltaX = currentMousePos.x - prevMousePosRotation.x;
+    int deltaY = currentMousePos.y - prevMousePosRotation.y;
 
     // Update rotation angles based on mouse movement
     alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
@@ -591,27 +593,32 @@ void UpdateRotationFromMouse()
     // clamp angles
 
     // Update previous mouse position
-    prevMousePos = currentMousePos;
+    prevMousePosRotation = currentMousePos;
   }
   else
   {
     // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePos);
+    GetCursorPos(&prevMousePosRotation);
   }
 }
 // Call function to initialize previous mouse pos
 void InitializeMousePosition()
 {
-  GetCursorPos(&prevMousePos);
+  {
+    POINT initialMousePos;
+    GetCursorPos(&initialMousePos);
+    prevMousePosRotation        = initialMousePos;
+    prevMousePosCameraDirection = initialMousePos;
+  }
 }
+
 
 void UpdateCameraPosition()// TODO move this function to be a member of Window class
 {
   static auto before = std::chrono::high_resolution_clock::now(); // TODO move this variable into Window class as member
   auto        now    = std::chrono::high_resolution_clock::now();
-  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
-  before             = now;
-  
+  float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
+  before       = now;
   if (GetAsyncKeyState('W') & 0x8000)
   {
     cameraPos += cameraSpeed * cameraFront * deltaS;
@@ -642,6 +649,10 @@ void UpdateCameraPosition()// TODO move this function to be a member of Window c
 
 void UpdateCameraDirection()
 {
+  static auto before = std::chrono::high_resolution_clock::now(); // TODO move this variable into Window class as member
+  auto        now    = std::chrono::high_resolution_clock::now();
+  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
+  before             = now;
     ///COULD ALSO NOT HOLD RIGHT BUTTON, BUT CURRENTLY NOT WORKING, IF NO BUTTON OPTION CHAIR DISSAPEARS, ALSO DISAPPEARS WHEN CLICKING RBUTTON 
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
   {
@@ -649,13 +660,13 @@ void UpdateCameraDirection()
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePos.x;
-    int deltaY = currentMousePos.y - prevMousePos.y;
+    int deltaX = currentMousePos.x - prevMousePosCameraDirection.x;
+    int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
 
     // Update camera front vector based on mouse movement
-    float sensitivity = 0.1f;
-     yaw         += deltaX * sensitivity;
-     pitch       -= deltaY * sensitivity;
+    float sensitivity = 1.0f;
+    yaw += deltaX * sensitivity * deltaS;
+    pitch -= deltaY * sensitivity * deltaS;
 
     if (pitch > 89.0f)
       pitch = 89.0f;
@@ -669,12 +680,12 @@ void UpdateCameraDirection()
     cameraFront = glm::normalize(direction);
 
     // Update previous mouse position
-    prevMousePos = currentMousePos;
+    prevMousePosCameraDirection = currentMousePos;
   }
   else
   {
     // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePos);
+    GetCursorPos(&prevMousePosCameraDirection);
   }
 }
 void Window::UpdatePipeline()
