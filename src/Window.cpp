@@ -12,7 +12,7 @@
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
-
+#include <math_extensions.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -546,30 +546,7 @@ void Window::mainloop()
 }
 // rotation variables and mouse sensitivity
 // rotation variables and mouse sensitivity
-float alphaX = 0.0f;
-float alphaY = 0.0f;
-float alphaZ = 0.0f;
 
-const float mouseSensX = 0.005f;
-const float mouseSensY = 0.005f;
-
-// Store previous mouse position
-static POINT prevMousePosRotation = {0, 0};
-static POINT prevMousePosCameraDirection = {0, 0};
-
-// Camera position and movement variables
-glm::vec3 cameraPos(0.0f, 0.0f, 5.0f);
-glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
-
-float     cameraSpeed = 1.0f; // Camera speed in meters per second
-float     fov         = 45.0f; // Initial zoom level (FOV)
-
-float nearPlane = 0.1f;
-float farPlane  = 100.0f;
-
-float yaw   = -90.0f; // Initialize to face towards negative z-axis
-float pitch = 0.0f;
 
 void UpdateRotationFromMouse()
 {
@@ -613,9 +590,9 @@ void InitializeMousePosition()
 }
 
 
-void UpdateCameraPosition()// TODO move this function to be a member of Window class
+void Window::UpdateCameraPosition() 
 {
-  static auto before = std::chrono::high_resolution_clock::now(); // TODO move this variable into Window class as member
+   // TODO move this variable into Window class as member
   auto        now    = std::chrono::high_resolution_clock::now();
   float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
   before       = now;
@@ -647,13 +624,13 @@ void UpdateCameraPosition()// TODO move this function to be a member of Window c
   }
 }
 
-void UpdateCameraDirection()
+void Window::UpdateCameraDirection()
 {
-  static auto before = std::chrono::high_resolution_clock::now(); // TODO move this variable into Window class as member
+ 
   auto        now    = std::chrono::high_resolution_clock::now();
-  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
-  before             = now;
-    ///COULD ALSO NOT HOLD RIGHT BUTTON, BUT CURRENTLY NOT WORKING, IF NO BUTTON OPTION CHAIR DISSAPEARS, ALSO DISAPPEARS WHEN CLICKING RBUTTON 
+  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before2).count() / 1e9f;
+  before2           = now;
+    ///COULD ALSO NOT HOLD RIGHT BUTTON
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
   {
     POINT currentMousePos;

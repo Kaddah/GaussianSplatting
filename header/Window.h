@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <wrl/client.h>
 #include <chrono>
+#include <windef.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -38,6 +39,11 @@ public:
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+
+  void UpdateCameraPosition();
+  void UpdateCameraDirection();
+
+
 
 protected:
   int  _width;
@@ -71,6 +77,9 @@ protected:
 
   ImGuiAdapter* imguiAdapter;
  
+
+    std::chrono::high_resolution_clock::time_point before; 
+    std::chrono::high_resolution_clock::time_point before2; 
 
 
   
