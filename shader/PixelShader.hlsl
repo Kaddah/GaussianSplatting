@@ -24,6 +24,6 @@ float4 main(VS_OUTPUT input) : SV_TARGET
     float4 sh_color = {abs(sh), abs(sh1_1), abs(sh2_0), 1.0};
     //float4 sh_color = {0.0, abs(sh1_1), 0.0, 1.0};
     // return interpolated color
-     return input.color;
+    return input.color;
     //return sh_color;
 }

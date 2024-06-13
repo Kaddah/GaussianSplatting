@@ -12,6 +12,7 @@
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
+#include <Shader.h>
 #include <math_extensions.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -232,16 +233,14 @@ bool Window::InitD3D()
 
   // create vertex and pixel shaders
   // compile vertex shader
-  ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
-  ID3DBlob* errorBuff;    // a buffer holding the error data if any
-  hr = D3DCompileFromFile(L"../shader/VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0",
-                          D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vertexShader, &errorBuff);
-  if (FAILED(hr))
-  {
-    OutputDebugStringA((char*)errorBuff->GetBufferPointer());
-    return false;
-  }
-
+   ID3DBlob* vertexShader = nullptr; // d3d blob for holding vertex shader bytecode
+   ID3DBlob* errorBuff = nullptr;    // a buffer holding the error data if any
+   std::wcout << L"Compiling vertex shader...\n";
+   if (!CompileShader(L"../shader/VertexShader.hlsl", ShaderType::Vertex, &vertexShader, &errorBuff))
+   {
+     std::cerr << "Failed to compile vertex shader." << std::endl;
+   }
+    
   // fill out a shader bytecode structure (which is basically just a pointer to the shader bytecode and the size of the
   // shader bytecode)
   D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
@@ -249,9 +248,12 @@ bool Window::InitD3D()
   vertexShaderBytecode.pShaderBytecode       = vertexShader->GetBufferPointer();
 
   // compile pixel shader
-  ID3DBlob* pixelShader;
-  ThrowIfFailed(D3DCompileFromFile(L"../shader/PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0",
-                                   D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
+  ID3DBlob* pixelShader = nullptr;
+  std::wcout << L"Compiling pixel shader...\n";
+  if (!CompileShader(L"../shader/PixelShader.hlsl", ShaderType::Pixel, &pixelShader, &errorBuff))
+  {
+    std::cerr << "Failed to compile pixel shader." << std::endl;
+  }
 
   // fill out shader bytecode structure for pixel shader
   D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
@@ -259,13 +261,11 @@ bool Window::InitD3D()
   pixelShaderBytecode.pShaderBytecode       = pixelShader->GetBufferPointer();
 
   // compile geometry shader
-  ID3DBlob* geometryShader;
-  hr = D3DCompileFromFile(L"../shader/GeometryShader.hlsl", nullptr, nullptr, "main", "gs_5_0",
-                          D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &geometryShader, &errorBuff);
-  if (FAILED(hr))
+  ID3DBlob* geometryShader = nullptr;
+  std::wcout << L"Compiling geometry shader...\n";
+  if (!CompileShader(L"../shader/GeometryShader.hlsl", ShaderType::Geometry, &geometryShader, &errorBuff))
   {
-    OutputDebugStringA((char*)errorBuff->GetBufferPointer());
-    return false;
+    std::cerr << "Failed to compile geometry shader." << std::endl;
   }
 
   // fill out shader bytecode structure for geometry shader
