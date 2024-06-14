@@ -8,6 +8,8 @@
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
 #include <wrl/client.h>
+#include <chrono>
+#include <windef.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -31,11 +33,17 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
+  
   ~Window();
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+
+  void UpdateCameraPosition();
+  void UpdateCameraDirection();
+
+
 
 protected:
   int  _width;
@@ -68,9 +76,16 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   ImGuiAdapter* imguiAdapter;
+ 
+
+    std::chrono::high_resolution_clock::time_point before; 
+    std::chrono::high_resolution_clock::time_point before2; 
+
+
+  
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
-  void UpdatePipeline(float angle, float aspectRatio);
+  void UpdatePipeline();
 };

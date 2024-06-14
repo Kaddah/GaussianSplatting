@@ -4,6 +4,7 @@
 #include <dxgi1_4.h>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 #include <wrl/client.h>
 
 #include "Window.h"
@@ -11,7 +12,8 @@
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
-
+#include <Shader.h>
+#include <math_extensions.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -34,6 +36,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _hwnd(NULL)
     , _running(true)
     , _fullScreen(fullScreen) // initializer list
+    
 {
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
@@ -230,16 +233,14 @@ bool Window::InitD3D()
 
   // create vertex and pixel shaders
   // compile vertex shader
-  ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
-  ID3DBlob* errorBuff;    // a buffer holding the error data if any
-  hr = D3DCompileFromFile(L"../shader/VertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0",
-                          D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &vertexShader, &errorBuff);
-  if (FAILED(hr))
-  {
-    OutputDebugStringA((char*)errorBuff->GetBufferPointer());
-    return false;
-  }
-
+   ID3DBlob* vertexShader = nullptr; // d3d blob for holding vertex shader bytecode
+   ID3DBlob* errorBuff = nullptr;    // a buffer holding the error data if any
+   std::wcout << L"Compiling vertex shader...\n";
+   if (!CompileShader(L"../shader/VertexShader.hlsl", ShaderType::Vertex, &vertexShader, &errorBuff))
+   {
+     std::cerr << "Failed to compile vertex shader." << std::endl;
+   }
+    
   // fill out a shader bytecode structure (which is basically just a pointer to the shader bytecode and the size of the
   // shader bytecode)
   D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
@@ -247,9 +248,12 @@ bool Window::InitD3D()
   vertexShaderBytecode.pShaderBytecode       = vertexShader->GetBufferPointer();
 
   // compile pixel shader
-  ID3DBlob* pixelShader;
-  ThrowIfFailed(D3DCompileFromFile(L"../shader/PixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0",
-                                   D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &pixelShader, &errorBuff));
+  ID3DBlob* pixelShader = nullptr;
+  std::wcout << L"Compiling pixel shader...\n";
+  if (!CompileShader(L"../shader/PixelShader.hlsl", ShaderType::Pixel, &pixelShader, &errorBuff))
+  {
+    std::cerr << "Failed to compile pixel shader." << std::endl;
+  }
 
   // fill out shader bytecode structure for pixel shader
   D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
@@ -257,13 +261,11 @@ bool Window::InitD3D()
   pixelShaderBytecode.pShaderBytecode       = pixelShader->GetBufferPointer();
 
   // compile geometry shader
-  ID3DBlob* geometryShader;
-  hr = D3DCompileFromFile(L"../shader/GeometryShader.hlsl", nullptr, nullptr, "main", "gs_5_0",
-                          D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0, &geometryShader, &errorBuff);
-  if (FAILED(hr))
+  ID3DBlob* geometryShader = nullptr;
+  std::wcout << L"Compiling geometry shader...\n";
+  if (!CompileShader(L"../shader/GeometryShader.hlsl", ShaderType::Geometry, &geometryShader, &errorBuff))
   {
-    OutputDebugStringA((char*)errorBuff->GetBufferPointer());
-    return false;
+    std::cerr << "Failed to compile geometry shader." << std::endl;
   }
 
   // fill out shader bytecode structure for geometry shader
@@ -488,7 +490,7 @@ void Window::Render()
 {
   HRESULT hr;
 
-  UpdatePipeline(100.0f, 0.1f); // update the pipeline by sending commands to the commandqueue
+  UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
   // create an array of command lists (only one command list here)
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
@@ -543,16 +545,10 @@ void Window::mainloop()
   }
 }
 // rotation variables and mouse sensitivity
-static float alphaX = 0.0f;
-static float alphaY = 0.0f;
-static float alphaZ = 0.0f;
+// rotation variables and mouse sensitivity
 
-const float mouseSensX = 0.005f;
-const float mouseSensY = 0.005f;
 
-// Store previous mouse position
-static POINT prevMousePos = {0, 0};
-void         UpdateRotationFromMouse()
+void UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
@@ -565,30 +561,111 @@ void         UpdateRotationFromMouse()
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePos.x;
-    int deltaY = currentMousePos.y - prevMousePos.y;
+    int deltaX = currentMousePos.x - prevMousePosRotation.x;
+    int deltaY = currentMousePos.y - prevMousePosRotation.y;
 
     // Update rotation angles based on mouse movement
     alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
     alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
     // clamp angles
-    alphaX = glm::mod(alphaX, glm::two_pi<float>());
-    alphaY = glm::mod(alphaY, glm::two_pi<float>());
+
     // Update previous mouse position
-    prevMousePos = currentMousePos;
+    prevMousePosRotation = currentMousePos;
   }
   else
   {
     // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePos);
+    GetCursorPos(&prevMousePosRotation);
   }
 }
 // Call function to initialize previous mouse pos
 void InitializeMousePosition()
 {
-  GetCursorPos(&prevMousePos);
+  {
+    POINT initialMousePos;
+    GetCursorPos(&initialMousePos);
+    prevMousePosRotation        = initialMousePos;
+    prevMousePosCameraDirection = initialMousePos;
+  }
 }
-void Window::UpdatePipeline(float angle, float aspectRatio)
+
+
+void Window::UpdateCameraPosition() 
+{
+   // TODO move this variable into Window class as member
+  auto        now    = std::chrono::high_resolution_clock::now();
+  float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
+  before       = now;
+  if (GetAsyncKeyState('W') & 0x8000)
+  {
+    cameraPos += cameraSpeed * cameraFront * deltaS;
+  }
+  if (GetAsyncKeyState('S') & 0x8000)
+  {
+    cameraPos -= cameraSpeed * cameraFront * deltaS; // Move down
+  }
+  if (GetAsyncKeyState (VK_LSHIFT) & 0x8000) //
+  {
+    cameraPos -= cameraSpeed * cameraUp * deltaS; // Move down
+  }
+  if (GetAsyncKeyState(VK_SPACE) & 0x8000) //
+  {
+    cameraPos += cameraSpeed * cameraUp * deltaS; // Move down
+  }
+
+  const glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
+  if (GetAsyncKeyState('A') & 0x8000)
+  {
+    cameraPos -= cameraRight * cameraSpeed * deltaS; // Move left
+  }
+  if (GetAsyncKeyState('D') & 0x8000)
+  {
+    cameraPos += cameraRight * cameraSpeed * deltaS; // Move right
+  }
+}
+
+void Window::UpdateCameraDirection()
+{
+ 
+  auto        now    = std::chrono::high_resolution_clock::now();
+  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before2).count() / 1e9f;
+  before2           = now;
+    ///COULD ALSO NOT HOLD RIGHT BUTTON
+  if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
+  {
+    POINT currentMousePos;
+    GetCursorPos(&currentMousePos);
+
+    // Calculate the mouse movement delta
+    int deltaX = currentMousePos.x - prevMousePosCameraDirection.x;
+    int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
+
+    // Update camera front vector based on mouse movement
+    float sensitivity = 1.0f;
+    yaw += deltaX * sensitivity * deltaS;
+    pitch -= deltaY * sensitivity * deltaS;
+
+    if (pitch > 89.0f)
+      pitch = 89.0f;
+    if (pitch < -89.0f)
+      pitch = -89.0f;
+
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
+
+    // Update previous mouse position
+    prevMousePosCameraDirection = currentMousePos;
+  }
+  else
+  {
+    // Update previous mouse position when button is not pressed to avoid sudden jumps
+    GetCursorPos(&prevMousePosCameraDirection);
+  }
+}
+void Window::UpdatePipeline()
 {
   HRESULT hr;
 
@@ -603,7 +680,10 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
   UpdateRotationFromMouse();
-
+  UpdateCameraPosition();
+  UpdateCameraDirection();
+  //get aspectratio
+  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -612,10 +692,17 @@ void Window::UpdatePipeline(float angle, float aspectRatio)
   // Combine the rotations
   glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
 
-  // Update the constant buffer with the combined rotation matrix
-  UpdateConstantBuffer(rotationMat);
+  glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+  // near plane 0.1f farplane 100.0f
+  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
+  // Combine matrices to get mvp
+  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
+
+  // Update the constant buffer with mvp
+  UpdateConstantBuffer(mvpMat);
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
+
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
   //  draws to it starting from here
