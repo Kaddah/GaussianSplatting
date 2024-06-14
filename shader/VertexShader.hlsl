@@ -1,7 +1,7 @@
 cbuffer ConstantBuffer : register(b0)
 {
     float4x4 rotationMat;
-    float sh[45];
+    float sh[47];
 };
 
 struct VS_INPUT
