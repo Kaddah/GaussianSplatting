@@ -65,9 +65,7 @@ bool Window::InitD3D()
   // Create Device
   IDXGIFactory4* dxgiFactory;
   ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
-
   IDXGIAdapter1* adapter; // adapter = graphics card
-
   int  adapterIndex = 0;
   bool adapterFound = false;
 
@@ -76,7 +74,6 @@ bool Window::InitD3D()
   {
     DXGI_ADAPTER_DESC1 desc;
     adapter->GetDesc1(&desc);
-
     if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
     {
       continue;
@@ -93,10 +90,7 @@ bool Window::InitD3D()
     adapterIndex++;
   }
 
-  if (!adapterFound)
-  {
-    return false;
-  }
+  if (!adapterFound) { return false;}
 
   // Create device
   ThrowIfFailed(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
@@ -116,7 +110,8 @@ bool Window::InitD3D()
 
   // multisampling -> no multisampling -> value = 1
   DXGI_SAMPLE_DESC sampleDesc = {};
-  sampleDesc.Count            = 1; // multisample count
+  sampleDesc.Count            = 1; // multipsample count
+
 
   // Describe and create the swap chain.
   DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
@@ -125,8 +120,9 @@ bool Window::InitD3D()
   swapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT; // pipeline will render to this swap chain
   swapChainDesc.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD; // dxgi will discard the buffer (data) after call present
   swapChainDesc.OutputWindow = _hwnd;
-  swapChainDesc.SampleDesc   = sampleDesc;
+  swapChainDesc.SampleDesc = sampleDesc;
   swapChainDesc.Windowed     = !_fullScreen;
+  swapChainDesc.Flags            = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // allow resizing and mode switch
 
   IDXGISwapChain* tempSwapChain;
 
@@ -420,6 +416,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
           window->Stop();
           DestroyWindow(hwnd);
         }
+      }
+      return 0;
+
+    case WM_SIZE:
+      if (window)
+      {
+        int width = LOWORD(lParam);
+        int height = HIWORD(lParam);
+        window->Resize(width, height);
       }
       return 0;
 
@@ -850,6 +855,51 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     std::cerr << "Error initializing vertex buffer: " << e.what() << std::endl;
     return false;
   }
+}
+
+void Window::Resize(UINT newWidth, UINT newHeight)
+{
+  if (newWidth == 0 || newHeight == 0) { return; } // Skip zero size
+
+  // commandQueue->Flush();
+
+  // Release the existing render targets
+  for (UINT i = 0; i < frameBufferCount; i++)
+  {
+    renderTargets[i].Reset();  
+  }
+
+  _width = newWidth; // update width
+  _height = newHeight; // update height
+
+  WaitForPreviousFrame(); // Wait until all previous GPU work is complete
+
+  // Release current back buffers
+  for (int i = 0; i < frameBufferCount; i++)
+  {
+    renderTargets[i].Reset();
+  }
+
+  // Resize the swap chain
+  DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+  swapChain->GetDesc(&swapChainDesc);
+  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, _width, _height, swapChainDesc.BufferDesc.Format,
+                                         swapChainDesc.Flags));
+  frameIndex = swapChain->GetCurrentBackBufferIndex();
+
+  // Recreate the render target views for the new back buffers
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  for (int i = 0; i < frameBufferCount; i++) {
+    ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+    device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, rtvDescriptorSize);
+  }
+
+  // Update the viewport and scissor rect
+  viewport.Width = static_cast<float>(_width);
+  viewport.Height = static_cast<float>(_height);
+  scissorRect.right = _width;
+  scissorRect.bottom = _height;
 }
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
