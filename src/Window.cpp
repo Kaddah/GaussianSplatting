@@ -545,10 +545,11 @@ void Window::mainloop()
   }
 }
 // rotation variables and mouse sensitivity
-// rotation variables and mouse sensitivity
 
 
-void UpdateRotationFromMouse()
+
+
+void Window::UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
@@ -558,6 +559,7 @@ void UpdateRotationFromMouse()
   if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
   {
     POINT currentMousePos;
+   
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
@@ -579,7 +581,7 @@ void UpdateRotationFromMouse()
   }
 }
 // Call function to initialize previous mouse pos
-void InitializeMousePosition()
+void Window::InitializeMousePosition()
 {
   {
     POINT initialMousePos;
@@ -627,10 +629,6 @@ void Window::UpdateCameraPosition()
 void Window::UpdateCameraDirection()
 {
  
-  auto        now    = std::chrono::high_resolution_clock::now();
-  float       deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before2).count() / 1e9f;
-  before2           = now;
-    ///COULD ALSO NOT HOLD RIGHT BUTTON
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
   {
     POINT currentMousePos;
@@ -641,9 +639,9 @@ void Window::UpdateCameraDirection()
     int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
 
     // Update camera front vector based on mouse movement
-    float sensitivity = 1.0f;
-    yaw += deltaX * sensitivity * deltaS;
-    pitch -= deltaY * sensitivity * deltaS;
+    float sensitivity = 0.05f;
+    yaw += deltaX * sensitivity;
+    pitch -= deltaY * sensitivity;
 
     if (pitch > 89.0f)
       pitch = 89.0f;

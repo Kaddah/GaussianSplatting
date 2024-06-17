@@ -42,8 +42,32 @@ public:
 
   void UpdateCameraPosition();
   void UpdateCameraDirection();
+  void UpdateRotationFromMouse();
+  void InitializeMousePosition();
 
 
+  POINT prevMousePosCameraDirection = {0, 0};
+  POINT prevMousePosRotation        = {0, 0};
+  //
+  float alphaX = 0.0f;
+  float alphaY = 0.0f;
+  float alphaZ = 0.0f;
+
+  const float mouseSensX = 0.005f;
+  const float mouseSensY = 0.005f;
+  // Camera position and movement variables
+  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+  glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+  glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
+  float cameraSpeed = 1.0f;  // Camera speed in meters per second
+  float fov         = 45.0f; // Initial zoom level (FOV)
+
+  float nearPlane = 0.1f;
+  float farPlane  = 100.0f;
+
+  float yaw   = -90.0f; // Initialize to face towards negative z-axis
+  float pitch = 0.0f;
 
 protected:
   int  _width;
@@ -51,7 +75,8 @@ protected:
   bool _running;
   bool _fullScreen;
   HWND _hwnd;
-
+ //  POINT                 prevMousePosRotation        = {0, 0};
+  // POINT                 prevMousePosCameraDirection = {0, 0};
   ComPtr<ID3D12Device>         device;
   ComPtr<IDXGISwapChain3>      swapChain;         // swapchain used to switch between render targets
   ComPtr<ID3D12CommandQueue>   commandQueue;      // container for command lists
