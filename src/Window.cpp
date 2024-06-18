@@ -710,10 +710,9 @@ void Window::UpdatePipeline()
 
   draw();
   // imgui command list update here
-
+  
   imguiAdapter->startMainImGui();
-  // ImGui::ShowDemoWindow();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
