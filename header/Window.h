@@ -1,5 +1,5 @@
 #pragma once
-#include "WipImgui.h"
+#include "ImguiAdapter.h"
 #include <D3Dcompiler.h>
 #include <Vertex.h>
 #include <Windows.h>

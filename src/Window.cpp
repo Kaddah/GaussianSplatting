@@ -8,7 +8,7 @@
 #include <wrl/client.h>
 
 #include "Window.h"
-#include "WipImgui.h"
+#include "ImguiAdapter.h"
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>

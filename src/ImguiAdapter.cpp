@@ -1,4 +1,4 @@
-#include "WipImgui.h"
+#include "ImguiAdapter.h"
 #include <DxException.h>
 #include <glm/glm.hpp>
 
