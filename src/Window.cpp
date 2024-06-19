@@ -19,6 +19,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
+#include <memory>
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -342,7 +344,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    imguiAdapter = new ImGuiAdapter(device, frameBufferCount, _hwnd);
+    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
   }
   else
   {

@@ -10,6 +10,7 @@
 #include <wrl/client.h>
 #include <chrono>
 #include <windef.h>
+#include <memory>
 
 using Microsoft::WRL::ComPtr;
 
@@ -100,7 +101,7 @@ protected:
   D3D12_VIEWPORT       viewport;            // area that output from rasterizer will be stretched to.
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
-  ImGuiAdapter* imguiAdapter;
+  std::unique_ptr<ImGuiAdapter> imguiAdapter;
  
 
     std::chrono::high_resolution_clock::time_point before; 
