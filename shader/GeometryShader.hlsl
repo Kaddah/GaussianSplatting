@@ -14,32 +14,44 @@ struct GS_OUTPUT
 [maxvertexcount(72)]
 void main(triangle GS_INPUT input[3], inout TriangleStream<GS_OUTPUT> outputStream)
 {
-    // Calculate the center of the triangle
-    float4 center = (input[0].pos + input[1].pos + input[2].pos) / 3.0;
-    float4 color = (input[0].color + input[1].color + input[2].color) / 3.0;
-
     // Number of segments for Gaussian splatting
     int numSegments = 24; // Increase for more detail
     float angleStep = 2.0 * 3.14159265359 / numSegments;
 
     // Standard deviation for Gaussian distribution
-    float sigma = 0.05; // Adjust to change "splat" size default=0.1
+    float sigma = 0.1; // Adjust to change "splat" size default=0.1
 
-    // Generate points for Gaussian splatting
+    // Iterate over each input triangle
     for (int i = 0; i < 3; ++i)
     {
+        // Central vertex for the filled circle (splat)
+        GS_OUTPUT centerOutput;
+        centerOutput.pos = input[i].pos;
+        centerOutput.color = input[i].color; // Use the color from input vertex
+        centerOutput.offset = float2(0.0, 0.0);
+
+        // Generate triangles for the circle around each vertex
         for (int j = 0; j < numSegments; ++j)
         {
-            float angle = j * angleStep;
-            float2 offset = float2(cos(angle), sin(angle)) * sigma;
+            float angle0 = j * angleStep;
+            float angle1 = (j + 1) * angleStep;
+            float2 offset0 = float2(cos(angle0), sin(angle0)) * sigma;
+            float2 offset1 = float2(cos(angle1), sin(angle1)) * sigma;
 
-            GS_OUTPUT output;
-            output.pos = input[i].pos + float4(offset.x, offset.y, 0.0f, 0.0f); // Correct position using triangle center
-            output.color = input[i].color;
-            output.offset = offset;
-            outputStream.Append(output);
+            GS_OUTPUT output0, output1;
+
+            output0.pos = input[i].pos + float4(offset0.x, offset0.y, 0.0f, 0.0f);
+            output0.color = input[i].color; // Use the color from input vertex
+            output0.offset = offset0;
+
+            output1.pos = input[i].pos + float4(offset1.x, offset1.y, 0.0f, 0.0f);
+            output1.color = input[i].color; // Use the color from input vertex
+            output1.offset = offset1;
+
+            // Emit the triangle (center, output0, output1)
+            outputStream.Append(centerOutput);
+            outputStream.Append(output0);
+            outputStream.Append(output1);
         }
     }
-
-    outputStream.RestartStrip();
 }
