@@ -1,23 +1,25 @@
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include <chrono>
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <iostream>
 #include <stdexcept>
+#include <chrono>
 #include <wrl/client.h>
 
 #include "Window.h"
-#include "WipImgui.h"
+#include "ImguiAdapter.h"
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
 #include <Shader.h>
+#include <math_extensions.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <math_extensions.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+
+#include <memory>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -36,7 +38,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _hwnd(NULL)
     , _running(true)
     , _fullScreen(fullScreen) // initializer list
-
+    
 {
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
@@ -233,14 +235,14 @@ bool Window::InitD3D()
 
   // create vertex and pixel shaders
   // compile vertex shader
-  ID3DBlob* vertexShader = nullptr; // d3d blob for holding vertex shader bytecode
-  ID3DBlob* errorBuff    = nullptr; // a buffer holding the error data if any
-  std::wcout << L"Compiling vertex shader...\n";
-  if (!CompileShader(L"../shader/VertexShader.hlsl", ShaderType::Vertex, &vertexShader, &errorBuff))
-  {
-    std::cerr << "Failed to compile vertex shader." << std::endl;
-  }
-
+   ID3DBlob* vertexShader = nullptr; // d3d blob for holding vertex shader bytecode
+   ID3DBlob* errorBuff = nullptr;    // a buffer holding the error data if any
+   std::wcout << L"Compiling vertex shader...\n";
+   if (!CompileShader(L"../shader/VertexShader.hlsl", ShaderType::Vertex, &vertexShader, &errorBuff))
+   {
+     std::cerr << "Failed to compile vertex shader." << std::endl;
+   }
+    
   // fill out a shader bytecode structure (which is basically just a pointer to the shader bytecode and the size of the
   // shader bytecode)
   D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
@@ -274,45 +276,12 @@ bool Window::InitD3D()
   geometryShaderBytecode.pShaderBytecode       = geometryShader->GetBufferPointer();
 
   // create input layout
-  D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
-      {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-       0},
-      {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-       0},
-      {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 0,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 1,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 2, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 2,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 3, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 3,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 4, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 4,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 5, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 5,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 6, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 6,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 7, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 7,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 8, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 8,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 9, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 9,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 10, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 10,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 11, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 11,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 12, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 12,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 13, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 13,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 14, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 14,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-      {"TEXCOORD", 15, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, f_rest) + sizeof(glm::vec3) * 15,
-       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+  D3D12_INPUT_ELEMENT_DESC inputLayout[] = {{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos),
+                                             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+                                            {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
+                                             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+                                            {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, color),
+                                             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
 
   // D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
   //     {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -375,7 +344,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    imguiAdapter = new ImGuiAdapter(device, frameBufferCount, _hwnd);
+    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
   }
   else
   {
@@ -578,9 +547,11 @@ void Window::mainloop()
   }
 }
 // rotation variables and mouse sensitivity
-// rotation variables and mouse sensitivity
 
-void UpdateRotationFromMouse()
+
+
+
+void Window::UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
@@ -590,6 +561,7 @@ void UpdateRotationFromMouse()
   if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
   {
     POINT currentMousePos;
+   
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
@@ -611,7 +583,7 @@ void UpdateRotationFromMouse()
   }
 }
 // Call function to initialize previous mouse pos
-void InitializeMousePosition()
+void Window::InitializeMousePosition()
 {
   {
     POINT initialMousePos;
@@ -621,10 +593,11 @@ void InitializeMousePosition()
   }
 }
 
-void Window::UpdateCameraPosition()
+
+void Window::UpdateCameraPosition() 
 {
-  // TODO move this variable into Window class as member
-  auto  now    = std::chrono::high_resolution_clock::now();
+   // TODO move this variable into Window class as member
+  auto        now    = std::chrono::high_resolution_clock::now();
   float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
   before       = now;
   if (GetAsyncKeyState('W') & 0x8000)
@@ -635,7 +608,7 @@ void Window::UpdateCameraPosition()
   {
     cameraPos -= cameraSpeed * cameraFront * deltaS; // Move down
   }
-  if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) //
+  if (GetAsyncKeyState (VK_LSHIFT) & 0x8000) //
   {
     cameraPos -= cameraSpeed * cameraUp * deltaS; // Move down
   }
@@ -657,11 +630,7 @@ void Window::UpdateCameraPosition()
 
 void Window::UpdateCameraDirection()
 {
-
-  auto  now    = std::chrono::high_resolution_clock::now();
-  float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before2).count() / 1e9f;
-  before2      = now;
-  /// COULD ALSO NOT HOLD RIGHT BUTTON
+ 
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
   {
     POINT currentMousePos;
@@ -672,9 +641,9 @@ void Window::UpdateCameraDirection()
     int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
 
     // Update camera front vector based on mouse movement
-    float sensitivity = 1.0f;
-    yaw += deltaX * sensitivity * deltaS;
-    pitch -= deltaY * sensitivity * deltaS;
+    float sensitivity = 0.05f;
+    yaw += deltaX * sensitivity;
+    pitch -= deltaY * sensitivity;
 
     if (pitch > 89.0f)
       pitch = 89.0f;
@@ -713,7 +682,7 @@ void Window::UpdatePipeline()
   UpdateRotationFromMouse();
   UpdateCameraPosition();
   UpdateCameraDirection();
-  // get aspectratio
+  //get aspectratio
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -743,10 +712,9 @@ void Window::UpdatePipeline()
 
   draw();
   // imgui command list update here
-
+  
   imguiAdapter->startMainImGui();
-  // ImGui::ShowDemoWindow();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
