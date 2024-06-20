@@ -6,6 +6,7 @@ cbuffer ConstantBuffer : register(b0)
 struct VS_INPUT
 {
     float4 pos : POSITION;
+    float4 color : COLOR;
     float3 f_rest[16] : TEXCOORD0;
 };
 
