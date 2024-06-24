@@ -114,12 +114,20 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
               plyFile.read(reinterpret_cast<char*>(&vertex.rotation.z), sizeof(float));
             else if (property == "rot_3")
               plyFile.read(reinterpret_cast<char*>(&vertex.rotation.w), sizeof(float));
+            else if (property.substr(0, 5) == "f_dc_")
+            {
+              int index = std::stoi(property.substr(5));
+              if (index >= 0 && index < 3)
+              {
+                plyFile.read(reinterpret_cast<char*>(&vertex.f_rest[index]), sizeof(float));
+              }
+            }
             else if (property.substr(0, 7) == "f_rest_")
             {
               int index = std::stoi(property.substr(7));
-              if (index >= 0 && index < 48)
+              if (index >= 0 && index < 45)
               {
-                plyFile.read(reinterpret_cast<char*>(&vertex.f_rest[index]), sizeof(float));
+                plyFile.read(reinterpret_cast<char*>(&vertex.f_rest[3 + index]), sizeof(float));
               }
             }
           }
