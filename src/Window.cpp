@@ -684,6 +684,9 @@ void Window::UpdateCameraDirection()
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(direction);
+    glm::vec3 cameraRight;
+   cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f,1.0f,0.0f))); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
+    cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
 
     // Update previous mouse position
     prevMousePosCameraDirection = currentMousePos;
