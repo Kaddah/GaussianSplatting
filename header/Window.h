@@ -33,7 +33,6 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
-  void Resize(UINT newWidth, UINT newHeight);
   
   ~Window();
 
