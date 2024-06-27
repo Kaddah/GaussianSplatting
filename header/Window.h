@@ -3,13 +3,13 @@
 #include <D3Dcompiler.h>
 #include <Vertex.h>
 #include <Windows.h>
-#include <chrono>
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
-#include <windef.h>
 #include <wrl/client.h>
+#include <chrono>
+#include <windef.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -34,7 +34,7 @@ public:
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
   void Resize(UINT newWidth, UINT newHeight);
-
+  
   ~Window();
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
@@ -44,10 +44,9 @@ public:
   void UpdateCameraPosition();
   void UpdateCameraDirection();
 
-  bool IsD3DInitialized() const;
+
 
 protected:
-  bool _d3dInitialized = false;
   int  _width;
   int  _height;
   bool _running;
@@ -78,9 +77,13 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   ImGuiAdapter* imguiAdapter;
+ 
 
-  std::chrono::high_resolution_clock::time_point before;
-  std::chrono::high_resolution_clock::time_point before2;
+    std::chrono::high_resolution_clock::time_point before; 
+    std::chrono::high_resolution_clock::time_point before2; 
+
+
+  
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
