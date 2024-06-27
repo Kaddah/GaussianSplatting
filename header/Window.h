@@ -34,10 +34,6 @@ public:
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
   void Resize(UINT newWidth, UINT newHeight);
-  void Window::WaitForGpu(UINT frameIndex);
-  void Window::CleanupRenderTarget();
-  void Window::CreateRenderTargetViews();
-
 
   ~Window();
 
