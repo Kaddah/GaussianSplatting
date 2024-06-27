@@ -38,13 +38,22 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _fullScreen(fullScreen) // initializer list
     
 {
+  // Initialize fence values
+  for (UINT i = 0; i < frameBufferCount; ++i)
+  {
+    fenceValue[i] = 0;
+  }
+
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
-    throw std::runtime_error("Failed to initialize window");
+    MessageBox(0, L"Failed to create window", L"Error", MB_OK);
+    _d3dInitialized = false;
+    return;
   }
+
   if (!(_d3dInitialized = InitD3D()))
   {
-    MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
+    MessageBox(0, L"Failed to initialize Direct3D 12", L"Error", MB_OK);
   }
 }
 
@@ -863,47 +872,32 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 
 void Window::Resize(UINT newWidth, UINT newHeight)
 {
-  if (newWidth == 0 || newHeight == 0) { return; } // Skip zero size
+  if (newWidth == 0 || newHeight == 0 || !IsD3DInitialized())
+    return;
 
-  // commandQueue->Flush();
-
-  // Release the existing render targets
-  for (UINT i = 0; i < frameBufferCount; i++)
+  // Ensure all GPU commands are completed for all frames
+  for (UINT i = 0; i < frameBufferCount; ++i)
   {
-    renderTargets[i].Reset();  
+    WaitForGpu(i);
   }
 
-  _width = newWidth; // update width
-  _height = newHeight; // update height
-
-  WaitForPreviousFrame(); // Wait until all previous GPU work is complete
-
-  // Release current back buffers
-  for (int i = 0; i < frameBufferCount; i++)
-  {
-    renderTargets[i].Reset();
-  }
+  // Release the old views, so the resources can be freed
+  CleanupRenderTarget();
 
   // Resize the swap chain
   DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-  swapChain->GetDesc(&swapChainDesc);
-  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, _width, _height, swapChainDesc.BufferDesc.Format,
+  ThrowIfFailed(swapChain->GetDesc(&swapChainDesc));
+  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, newWidth, newHeight, swapChainDesc.BufferDesc.Format,
                                          swapChainDesc.Flags));
-  frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-  // Recreate the render target views for the new back buffers
-  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-  for (int i = 0; i < frameBufferCount; i++) {
-    ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
-    device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
-    rtvHandle.Offset(1, rtvDescriptorSize);
-  }
+  // Recreate the render target views
+  CreateRenderTargetViews();
 
-  // Update the viewport and scissor rect
-  viewport.Width = static_cast<float>(_width);
+  // Update the viewport
+  _width          = newWidth;
+  _height         = newHeight;
+  viewport.Width  = static_cast<float>(_width);
   viewport.Height = static_cast<float>(_height);
-  scissorRect.right = _width;
-  scissorRect.bottom = _height;
 }
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
@@ -916,4 +910,41 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
   cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
   constantBuffer[frameIndex]->Unmap(0, nullptr);
+}
+
+void Window::WaitForGpu(UINT frameIndex)
+{
+  // Signal and increment the fence value for the current frame.
+  const UINT64 currentFenceValue = fenceValue[frameIndex];
+  ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), currentFenceValue));
+
+  // Wait until the GPU has completed commands up to this fence point.
+  ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(currentFenceValue, fenceEvent));
+  WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
+
+  // Increment the fence value for the next frame.
+  fenceValue[frameIndex]++;
+}
+
+void Window::CleanupRenderTarget()
+{
+  for (UINT i = 0; i < frameBufferCount; ++i)
+  {
+    if (renderTargets[i])
+    {
+      renderTargets[i].Reset();
+    }
+  }
+}
+
+void Window::CreateRenderTargetViews()
+{
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+  for (UINT i = 0; i < frameBufferCount; ++i)
+  {
+    ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+    device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, rtvDescriptorSize);
+  }
 }
