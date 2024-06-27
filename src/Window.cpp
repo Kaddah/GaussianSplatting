@@ -42,7 +42,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   {
     throw std::runtime_error("Failed to initialize window");
   }
-  if (!InitD3D())
+  if (!(_d3dInitialized = InitD3D()))
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
@@ -420,7 +420,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       return 0;
 
     case WM_SIZE:
-      if (window)
+      if (window && window->IsD3DInitialized())
       {
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
@@ -669,6 +669,10 @@ void Window::UpdateCameraDirection()
     // Update previous mouse position when button is not pressed to avoid sudden jumps
     GetCursorPos(&prevMousePosCameraDirection);
   }
+}
+bool Window::IsD3DInitialized() const
+{
+  return _d3dInitialized;
 }
 void Window::UpdatePipeline()
 {
