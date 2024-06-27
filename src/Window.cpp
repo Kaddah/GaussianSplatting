@@ -553,7 +553,7 @@ void Window::mainloop()
 
   quaVerti = prepareTriangle();
 
-  ThrowIfFailed(InitializeVertexBuffer(quaVerti));
+  InitializeVertexBuffer(quaVerti);
 
   UpdateVertexBuffer(quaVerti);
 
@@ -813,29 +813,26 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 {
   try
   {
+    if (vertices.empty())
+    {
+      throw std::runtime_error("Vertex data is empty.");
+    }
     vBufferSize = vertices.size() * sizeof(Vertex);
     // Create default heap for the vertex buffer
     auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
-    HRESULT hr =
-        device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexBuffer));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer.");
-    }
+   ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vertexBuffer)));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
     // Create upload heap for vertex buffer
     auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     ID3D12Resource* vBufferUploadHeap;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vBufferUploadHeap));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer upload heap.");
-    }
+    ThrowIfFailed(device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vBufferUploadHeap)));
     vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
     // Copy vertex data to upload heap
@@ -859,12 +856,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 
     // Increment fence value
     fenceValue[frameIndex]++;
-    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-    if (FAILED(hr))
-    {
-      _running = false;
-      return false;
-    }
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
     // Create vertex buffer view
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();

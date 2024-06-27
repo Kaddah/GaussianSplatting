@@ -85,9 +85,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // start the main loop
     window.mainloop();
   }
-  catch (std::exception)
+  catch (const DxException& e)
   {
-    MessageBox(0, L"Window Initialization - Failed", L"Error", MB_OK);
+    // Detailed error message for DxException
+    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+    return -1;
+  }
+  catch (const std::exception& e)
+  {
+    // Generic error message for other exceptions
+    MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
+    return -1;
   }
 
   return 0;
