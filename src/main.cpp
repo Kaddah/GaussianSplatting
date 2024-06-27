@@ -75,7 +75,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	//std::string plyFilename = "../assets/file.ply";
 	
 	//default if exe get no argument
-	std::string plyFilename = "../assets/test_vase.ply";
+	std::string plyFilename = "../assets/file.ply";
 	if (strlen(lpCmdLine) > 0)
 	{
 		// set path to given argument (if run in Visual Studio the argument is set by CMake File to "../assets/file.ply")

@@ -11,7 +11,7 @@ struct GS_OUTPUT
     float2 offset : OFFSET; // Offset for Gaussian splatting
 };
 
-static const int numTriangles = 8;
+static const int numTriangles = 4;
 
 [maxvertexcount(numTriangles * 3)] void main(point GS_INPUT input[1], inout TriangleStream<GS_OUTPUT> outputStream)
 {
