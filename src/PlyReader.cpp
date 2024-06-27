@@ -188,8 +188,16 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
     std::memcpy(&vertex.rotation.w, data, sizeof(float));
     data += sizeof(float);
   };
+  for (int i = 0; i < 3; ++i)
+  {
+    propertyReadersBinary["f_dc_" + std::to_string(i)] = [i](char*& data, Vertex& vertex)
+    {
+      std::memcpy(&vertex.f_rest[i], data, sizeof(float));
+      data += sizeof(float);
+    };
+  }
 
-  for (int i = 0; i < 48; ++i)
+  for (int i = 0; i < 45; ++i)
   {
     propertyReadersBinary["f_rest_" + std::to_string(i)] = [i](char*& data, Vertex& vertex)
     {
