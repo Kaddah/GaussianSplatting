@@ -388,6 +388,41 @@ Window::~Window()
   CloseHandle(fenceEvent);
 }
 
+void Window::UpdateProjectionMatrix(UINT width, UINT height)
+{
+  float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+  float fovAngleY   = glm::radians(45.0f); // Field of view angle in radians
+
+  // Create the perspective projection matrix with the new aspect ratio
+  glm::mat4 perspectiveMatrix = glm::perspective(fovAngleY, aspectRatio, 0.01f, 1000.0f);
+
+  UpdateConstantBuffer(perspectiveMatrix);
+
+}
+
+void Window::UpdateViewportAndScissorRect(UINT width, UINT height)
+{
+  // Update the viewport
+  D3D12_VIEWPORT viewport = {};
+  viewport.TopLeftX       = 0;
+  viewport.TopLeftY       = 0;
+  viewport.Width          = static_cast<float>(width);
+  viewport.Height         = static_cast<float>(height);
+  viewport.MinDepth       = 0.0f;
+  viewport.MaxDepth       = 1.0f;
+
+  // Update the scissor rect
+  D3D12_RECT scissorRect = {};
+  scissorRect.left       = 0;
+  scissorRect.top        = 0;
+  scissorRect.right      = static_cast<LONG>(width);
+  scissorRect.bottom     = static_cast<LONG>(height);
+
+    // Set the viewport and scissor rect in the command list
+  commandList->RSSetViewports(1, &viewport);
+  commandList->RSSetScissorRects(1, &scissorRect);
+}
+
 CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 {
   CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex,
@@ -433,7 +468,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       {
         int width = LOWORD(lParam);
         int height = HIWORD(lParam);
-        window->Resize(width, height);
+        window->ResizeWindow(width, height);
       }
       return 0;
 
@@ -870,7 +905,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
   }
 }
 
-void Window::Resize(UINT newWidth, UINT newHeight)
+void Window::ResizeWindow(UINT newWidth, UINT newHeight)
 {
   if (newWidth == 0 || newHeight == 0 || !IsD3DInitialized())
     return;
@@ -893,11 +928,11 @@ void Window::Resize(UINT newWidth, UINT newHeight)
   // Recreate the render target views
   CreateRenderTargetViews();
 
-  // Update the viewport
-  _width          = newWidth;
-  _height         = newHeight;
-  viewport.Width  = static_cast<float>(_width);
-  viewport.Height = static_cast<float>(_height);
+  // Update the viewport and scissor rect
+  UpdateViewportAndScissorRect(newWidth, newHeight);
+
+  // Update projection matrix
+  UpdateProjectionMatrix(newWidth, newHeight);
 }
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
@@ -934,13 +969,24 @@ void Window::CleanupRenderTarget()
     {
       renderTargets[i].Reset();
     }
+    rtvDescriptorHeap.Reset();
   }
 }
 
 void Window::CreateRenderTargetViews()
 {
-  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    // Describe and create a render target view (RTV) descriptor heap
+  D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+    rtvHeapDesc.NumDescriptors             = rtvDescriptorSize;
+    rtvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    rtvHeapDesc.NodeMask                   = 0;
+    ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap)));
 
+    rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    // Create RTVs for each back buffer
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   for (UINT i = 0; i < frameBufferCount; ++i)
   {
     ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
