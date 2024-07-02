@@ -1,6 +1,7 @@
 cbuffer ConstantBuffer : register(b0)
 {
-    float4x4 rotationMat;
+    float4x4 transformMat;
+    
 };
 
 struct VS_INPUT
@@ -23,7 +24,7 @@ static const float SH_C3[7] = { 0.5900435898f, 2.8906114426f, 0.4570457995f, 0.3
 
 float3 computeColorFromSH(float3 position, float3 f_rest[16])
 {
-    float3 cam_pos = mul(rotationMat, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    float3 cam_pos = mul(transformMat, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
     float3 dir = position - cam_pos;
     dir = normalize(dir);
 
@@ -64,7 +65,9 @@ float3 computeColorFromSH(float3 position, float3 f_rest[16])
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.pos = mul(rotationMat, input.pos);
+    output.pos = mul(transformMat, input.pos);
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
     return output;
+    
+   
 }

@@ -26,7 +26,8 @@ using Microsoft::WRL::ComPtr;
 
 struct ConstantBuffer
 {
-  glm::mat4 rotationMat;
+  glm::mat4 transformMat;
+ 
 };
 
 std::vector<Vertex> quaVerti;
@@ -686,7 +687,7 @@ void Window::UpdateCameraDirection()
     cameraFront = glm::normalize(direction);
     glm::vec3 cameraRight;
    cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f,1.0f,0.0f))); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
-    cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
+   cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
 
     // Update previous mouse position
     prevMousePosCameraDirection = currentMousePos;
@@ -697,6 +698,43 @@ void Window::UpdateCameraDirection()
     GetCursorPos(&prevMousePosCameraDirection);
   }
 }
+void Window::OrbitalCamera()
+{
+  if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+  {
+
+    POINT currentMousePos;
+    GetCursorPos(&currentMousePos);
+
+    int deltaX = currentMousePos.x - prevMousePosCameraFocus.x;
+    int deltaY = currentMousePos.y - prevMousePosCameraFocus.y;
+
+    theta += deltaX * mouseSensX;
+    phi -= deltaY * mouseSensY;
+
+    if (phi > glm::radians(89.0f))
+      phi = glm::radians(89.0f);
+    if (phi < glm::radians(-89.0f))
+      phi = glm::radians(-89.0f);
+
+    prevMousePosCameraFocus = currentMousePos;
+  }
+  else
+     {
+       // Update previous mouse position when button is not pressed to avoid sudden jumps
+       GetCursorPos(&prevMousePosCameraFocus);
+     }
+     cameraPos.x = cameraTarget.x + radius * cos(phi) * cos(theta);
+     cameraPos.y = cameraTarget.y + radius * sin(phi);
+     cameraPos.z = cameraTarget.z + radius * cos(phi) * sin(theta);
+
+     // Calculate the view matrix
+     glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+     // Calculate the new camera position in Cartesian coordinates
+    
+  }
+  
+
 void Window::UpdatePipeline()
 {
   HRESULT hr;
@@ -711,9 +749,16 @@ void Window::UpdatePipeline()
   // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
-  UpdateRotationFromMouse();
-  UpdateCameraPosition();
-  UpdateCameraDirection();
+    if (orbiCam = false)
+  {
+    UpdateCameraPosition();
+    UpdateCameraDirection();
+  }
+  else 
+  {
+    std::wcout << L"orbiCam is true\n";
+    OrbitalCamera();
+  }
   // get aspectratio
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
   // Create individual rotation matrices for each axis
@@ -726,12 +771,31 @@ void Window::UpdatePipeline()
 
   glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
   // near plane 0.1f farplane 100.0f
+
+  glm::mat4 orbitalViewMatrix = glm::lookAt(cameraPos, cameraTarget, cameraUp);
   glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
   // Combine matrices to get mvp
   glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
+
+
+  // Call UpdateConstantBuffer to update the orbital matrix
+
+   glm::mat4 transformMat;
+  
+  if (orbiCam = false)
+  {
+    transformMat = mvpMat;
+  }
+  else 
+  {
+    transformMat = projectionMatrix * orbitalViewMatrix;
+  }
+
+  // Update the constant buffer with the selected matrix
+  UpdateConstantBuffer(transformMat);
   // Update the constant buffer with mvp
-  UpdateConstantBuffer(mvpMat);
+ // UpdateConstantBuffer(mvpMat);
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
 
@@ -746,7 +810,7 @@ void Window::UpdatePipeline()
   // imgui command list update here
 
   imguiAdapter->startMainImGui();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
@@ -883,7 +947,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
   }
 }
 
-void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
+void Window::UpdateConstantBuffer(const glm::mat4& transformMat)
 {
   if (!constantBuffer[frameIndex])
   {
@@ -891,6 +955,7 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
   }
   ConstantBuffer* cbDataBegin = nullptr;
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
-  cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
+  cbDataBegin->transformMat = transformMat;
+ 
   constantBuffer[frameIndex]->Unmap(0, nullptr);
 }

@@ -7,6 +7,9 @@
 #include <wrl/client.h>
 #include <glm/glm.hpp>
 
+
+
+
 using Microsoft::WRL::ComPtr;
 
 class ImGuiAdapter
@@ -19,7 +22,8 @@ public:
   void renderImGui();
   void commandList(const ComPtr<ID3D12GraphicsCommandList>& commandList);
 
-  void createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp);
+  void createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos,
+                    glm::vec3& cameraFront, glm::vec3& cameraUp, bool& orbiCam);
 
 private:
   ComPtr<ID3D12DescriptorHeap> imguiSRVDescriptorHeap;
