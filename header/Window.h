@@ -34,8 +34,16 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
+  void CreateRenderTargetViews();
+  void UpdateViewportAndScissorRect(int newWidth, int newHeight);
+  void UpdateProjectionMatrix(int newWidth, int newHeight);
   
   ~Window();
+  void ResizeWindow(int newWidth, int newHeight);
+  bool IsD3DInitialized() const;   
+  void WaitForGPU();
+  void CleanupRenderTarget();
+
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
@@ -71,6 +79,8 @@ public:
   float pitch = 0.0f;
 
 protected:
+  bool _d3dInitialized = false;
+
   int  _width;
   int  _height;
   bool _running;

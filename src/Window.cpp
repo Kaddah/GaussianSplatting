@@ -27,6 +27,7 @@ using Microsoft::WRL::ComPtr;
 struct ConstantBuffer
 {
   glm::mat4 rotationMat;
+  glm::mat4 projectionMat;
 };
 
 std::vector<Vertex> quaVerti;
@@ -48,6 +49,11 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
+}
+
+bool Window::IsD3DInitialized() const
+{
+  return _d3dInitialized;
 }
 
 bool Window::InitD3D()
@@ -406,6 +412,26 @@ void Window::Stop()
   _running = false;
 }
 
+void Window::ResizeWindow(int newWidth, int newHeight)
+{
+  // don't allow 0 size window
+  if (newWidth == 0 || newHeight == 0 || !IsD3DInitialized())
+    return;
+
+  WaitForGPU(); // Ensure that the GPU is finished with the resources
+  CleanupRenderTarget(); // release the old rtv, so the resources can be freed
+
+  // Resize the swap chain
+  DXGI_SWAP_CHAIN_DESC desc = {};
+  swapChain->GetDesc(&desc);
+  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, newWidth, newHeight, desc.BufferDesc.Format, desc.Flags));
+  
+  CreateRenderTargetViews(); // create new render target views
+  UpdateViewportAndScissorRect(newWidth, newHeight);
+  UpdateProjectionMatrix(newWidth, newHeight);
+
+}
+
 Window::~Window()
 {
   // Cleanup
@@ -416,6 +442,91 @@ Window::~Window()
   if (swapChain->GetFullscreenState(&fs, NULL))
     swapChain->SetFullscreenState(false, NULL);
   CloseHandle(fenceEvent);
+}
+
+void Window::UpdateViewportAndScissorRect(int newWidth, int newHeight)
+{
+  // Update the viewport
+  D3D12_VIEWPORT viewport = {};
+  viewport.TopLeftX       = 0;
+  viewport.TopLeftY       = 0;
+  viewport.Width = static_cast<float>(newWidth);
+  viewport.Height = static_cast<float>(newHeight);
+  viewport.MinDepth = 0.0f;
+  viewport.MaxDepth = 1.0f;
+
+  // Update the scissor rect
+  D3D12_RECT scissorRect = {};
+  scissorRect.left = 0;
+  scissorRect.top = 0;
+  scissorRect.right      = static_cast<LONG>(newWidth);
+  scissorRect.bottom     = static_cast<LONG>(newHeight);
+
+  // Set the viewport and scissor rect in the command list
+  commandList->RSSetViewports(1, &viewport);
+  commandList->RSSetScissorRects(1, &scissorRect);
+
+}
+
+void Window::UpdateProjectionMatrix(int newWidth, int newHeight)
+{
+    float aspectRatio = static_cast<float>(newWidth) / static_cast<float>(newHeight);
+    float fovAngleY = glm::radians(45.0f);
+
+    float nearPlane = 0.1f;
+    float farPlane = 1000.0f;
+
+    glm::mat4 projectionMatrix = glm::perspective(fovAngleY, aspectRatio, nearPlane, farPlane);
+
+    UpdateConstantBuffer(projectionMatrix);
+}
+
+void Window::CreateRenderTargetViews()
+{
+    // describe an rtv descriptor heap and create
+    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+    rtvHeapDesc.NumDescriptors = frameBufferCount;
+    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    rtvHeapDesc.NodeMask                   = 0;
+    ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap)));
+
+    rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+		device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+		rtvHandle.Offset(1, rtvDescriptorSize);
+    }
+}
+
+void Window::CleanupRenderTarget()
+{
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        if (renderTargets[i])
+		    renderTargets[i].Reset();
+        rtvDescriptorHeap.Reset();
+	}
+}
+
+void Window::WaitForGPU()
+{
+  for (int i = 0; i < frameBufferCount; i++)
+  {
+    // Signal and increment the fence value
+    const UINT64 currentFenceValue = fenceValue[i];
+    ThrowIfFailed(commandQueue->Signal(fence[i].Get(), currentFenceValue));
+
+    // Wait until GPU has completed commands up to this fence point
+    ThrowIfFailed(fence[i]->SetEventOnCompletion(currentFenceValue, fenceEvent));
+    WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
+
+    // increment fence value for next frame
+    fenceValue[i]++;
+  }
 }
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
@@ -455,6 +566,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
           window->Stop();
           DestroyWindow(hwnd);
         }
+      }
+      return 0;
+
+      case WM_SIZE:
+      if (window && window->IsD3DInitialized())
+      {
+        int width  = LOWORD(lParam);
+        int height = HIWORD(lParam);
+        window->ResizeWindow(width, height);
       }
       return 0;
 
@@ -711,26 +831,22 @@ void Window::UpdatePipeline()
   UpdateRotationFromMouse();
   UpdateCameraPosition();
   UpdateCameraDirection();
-  // get aspectratio
-  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
+  
+  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height); // get aspectratio
+  
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
   glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
-
-  // Combine the rotations
-  glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
+  
+  glm::mat4 rotationMat = rotationZ * rotationY * rotationX; // Combine the rotations
 
   glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-  // near plane 0.1f farplane 100.0f
-  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
-  // Combine matrices to get mvp
-  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
+  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane); // near plane 0.1f farplane 100.0f
+  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat; // Combine matrices to get mvp
 
-  // Update the constant buffer with mvp
-  UpdateConstantBuffer(mvpMat);
-  // Call this onc  to set the initial mouse position
-  InitializeMousePosition();
+  UpdateConstantBuffer(mvpMat); // Update the constant buffer with mvp
+  InitializeMousePosition(); // Call this onc  to set the initial mouse position
 
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
