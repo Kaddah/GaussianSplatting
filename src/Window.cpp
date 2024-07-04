@@ -27,6 +27,8 @@ using Microsoft::WRL::ComPtr;
 struct ConstantBuffer
 {
   glm::mat4 rotationMat;
+  glm::mat4 projectionMat;
+  glm::mat4 viewMat;
 };
 
 std::vector<Vertex> quaVerti;
@@ -728,7 +730,7 @@ void Window::UpdatePipeline()
   glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
   // Update the constant buffer with mvp
-  UpdateConstantBuffer(mvpMat);
+  UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix);
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
 
@@ -880,7 +882,8 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
   }
 }
 
-void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
+void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMat,
+                                  const glm::mat4& viewMat)
 {
   if (!constantBuffer[frameIndex])
   {
@@ -889,5 +892,7 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
   ConstantBuffer* cbDataBegin = nullptr;
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
   cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
+  cbDataBegin->projectionMat = projectionMat;
+  cbDataBegin->viewMat        = viewMat;
   constantBuffer[frameIndex]->Unmap(0, nullptr);
 }

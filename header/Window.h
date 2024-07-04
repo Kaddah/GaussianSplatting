@@ -30,7 +30,7 @@ public:
   void                        WaitForPreviousFrame();
   void                        Render();
   void                        mainloop();
-  void                        UpdateConstantBuffer(const glm::mat4& rotationMat);
+  void                        UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat);
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
