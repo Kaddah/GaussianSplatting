@@ -41,7 +41,7 @@ public:
   ~Window();
   void ResizeWindow(int newWidth, int newHeight);
   bool IsD3DInitialized() const;   
-  void WaitForGPU();
+  void WaitForGPU(int frameIndex);
   void CleanupRenderTarget();
 
 
@@ -79,8 +79,9 @@ public:
   float pitch = 0.0f;
 
 protected:
-  bool _d3dInitialized = false;
+  int currentFrameIndex;
 
+  bool _d3dInitialized = false;
   int  _width;
   int  _height;
   bool _running;

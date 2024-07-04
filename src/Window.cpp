@@ -41,11 +41,20 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _fullScreen(fullScreen) // initializer list
 
 {
+    // Initialize fence values
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+	fenceValue[i] = 0;
+    }
+
+
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
-    throw std::runtime_error("Failed to initialize window");
+    MessageBox(0, L"Failed to create window", L"Error", MB_OK);
+    _d3dInitialized = false;
+    return;
   }
-  if (!InitD3D())
+  if (!(_d3dInitialized = InitD3D()))
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
@@ -73,9 +82,7 @@ bool Window::InitD3D()
   // Create Device
   IDXGIFactory4* dxgiFactory;
   ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
-
   IDXGIAdapter1* adapter; // adapter = graphics card
-
   int  adapterIndex = 0;
   bool adapterFound = false;
 
@@ -153,7 +160,7 @@ bool Window::InitD3D()
   // This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from
   // the pipeline otherwise set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
   rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  hr                = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
+  hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
   if (FAILED(hr))
   {
     return false;
@@ -418,18 +425,25 @@ void Window::ResizeWindow(int newWidth, int newHeight)
   if (newWidth == 0 || newHeight == 0 || !IsD3DInitialized())
     return;
 
-  WaitForGPU(); // Ensure that the GPU is finished with the resources
+  WaitForGPU(currentFrameIndex); // Ensure that the GPU is finished with the resources
+  std::cout << "Wait for GPU done" << std::endl;
+  
   CleanupRenderTarget(); // release the old rtv, so the resources can be freed
+  std::cout << "Cleanup Render Target done" << std::endl;
 
   // Resize the swap chain
   DXGI_SWAP_CHAIN_DESC desc = {};
   swapChain->GetDesc(&desc);
   ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, newWidth, newHeight, desc.BufferDesc.Format, desc.Flags));
-  
-  CreateRenderTargetViews(); // create new render target views
-  UpdateViewportAndScissorRect(newWidth, newHeight);
-  UpdateProjectionMatrix(newWidth, newHeight);
+  std::cout << "Resize Buffers done" << std::endl;
 
+
+  CreateRenderTargetViews(); // create new render target views
+  std::cout << "Create Render Target Views done" << std::endl;
+  UpdateViewportAndScissorRect(newWidth, newHeight);
+  std::cout << "Update Viewport and Scissor Rect done" << std::endl;
+  UpdateProjectionMatrix(newWidth, newHeight);
+  std::cout << "Update Projection Matrix done" << std::endl;
 }
 
 Window::~Window()
@@ -461,22 +475,27 @@ void Window::UpdateViewportAndScissorRect(int newWidth, int newHeight)
   scissorRect.top = 0;
   scissorRect.right      = static_cast<LONG>(newWidth);
   scissorRect.bottom     = static_cast<LONG>(newHeight);
-
+  
   // Set the viewport and scissor rect in the command list
   commandList->RSSetViewports(1, &viewport);
   commandList->RSSetScissorRects(1, &scissorRect);
-
 }
 
 void Window::UpdateProjectionMatrix(int newWidth, int newHeight)
 {
+    // code is repeating here, but it is necessary to update the projection matrix (i guess)
     float aspectRatio = static_cast<float>(newWidth) / static_cast<float>(newHeight);
-    float fovAngleY = glm::radians(45.0f);
 
-    float nearPlane = 0.1f;
-    float farPlane = 1000.0f;
+    // Create individual rotation matrices for each axis
+    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
 
-    glm::mat4 projectionMatrix = glm::perspective(fovAngleY, aspectRatio, nearPlane, farPlane);
+    glm::mat4 rotationMat = rotationZ * rotationY * rotationX; // Combine the rotations
+
+    glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane); // near plane 0.1f farplane 100.0f
+    glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;            // Combine matrices to get mvp
 
     UpdateConstantBuffer(projectionMatrix);
 }
@@ -497,7 +516,7 @@ void Window::CreateRenderTargetViews()
     for (int i = 0; i < frameBufferCount; i++)
     {
         ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
-		device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+      device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
 		rtvHandle.Offset(1, rtvDescriptorSize);
     }
 }
@@ -512,20 +531,33 @@ void Window::CleanupRenderTarget()
 	}
 }
 
-void Window::WaitForGPU()
+void Window::WaitForGPU(int frameIndex)
 {
   for (int i = 0; i < frameBufferCount; i++)
   {
-    // Signal and increment the fence value
-    const UINT64 currentFenceValue = fenceValue[i];
-    ThrowIfFailed(commandQueue->Signal(fence[i].Get(), currentFenceValue));
+    //// Signal and increment the fence value
+    //const UINT64 currentFenceValue = fenceValue[i];
+    //ThrowIfFailed(commandQueue->Signal(fence[i].Get(), currentFenceValue));
 
-    // Wait until GPU has completed commands up to this fence point
-    ThrowIfFailed(fence[i]->SetEventOnCompletion(currentFenceValue, fenceEvent));
-    WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
+    //// Wait until GPU has completed commands up to this fence point
+    //ThrowIfFailed(fence[i]->SetEventOnCompletion(currentFenceValue, fenceEvent));
+    //WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
 
-    // increment fence value for next frame
-    fenceValue[i]++;
+    //// increment fence value for next frame
+    //fenceValue[i]++;
+
+      //signal and increment the fence value for the current frame
+      const UINT64 currentFenceValue = fenceValue[frameIndex];
+      ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), currentFenceValue));
+
+      //wait until the GPU has completed commands up to this fence point
+      if (fence[frameIndex]->GetCompletedValue() < currentFenceValue)
+      {
+		  ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent));
+		  WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
+	  }
+      //increment fence value for the current frame
+	  fenceValue[frameIndex]++;
   }
 }
 
@@ -576,7 +608,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         int height = HIWORD(lParam);
         window->ResizeWindow(width, height);
       }
-      return 0;
+      break;
 
     case WM_DESTROY: // x button on top right corner of window was pressed
       window->Stop();
@@ -686,7 +718,6 @@ void Window::mainloop()
         _running = false;
         break;
       }
-
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
@@ -695,8 +726,14 @@ void Window::mainloop()
     {
       break;
     }
-
+    currentFrameIndex = swapChain->GetCurrentBackBufferIndex(); // get current frame index from the swap chain
     Render(); // execute the command queue
+
+    // Signal and wait for GPU as necessary
+    //WaitForGPU(currentFrameIndex);
+
+    // present the frame
+    swapChain->Present(1, 0);
   }
 }
 // rotation variables and mouse sensitivity
