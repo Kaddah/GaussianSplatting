@@ -8,7 +8,7 @@
 class PlyReader {
 public:
     static std::vector<Vertex> readPlyFile(const std::string& filename);
-
+   
 };
 
 #endif // PLY_READER_H

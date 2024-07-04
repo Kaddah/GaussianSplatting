@@ -7,8 +7,8 @@
 #include <stdexcept>
 #include <wrl/client.h>
 
+#include "ImguiAdapter.h"
 #include "Window.h"
-#include "WipImgui.h"
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
@@ -18,6 +18,8 @@
 #include <math_extensions.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+
+#include <memory>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -333,8 +335,8 @@ bool Window::InitD3D()
   psoDesc.VS                                 = vertexShaderBytecode;
   psoDesc.PS                                 = pixelShaderBytecode;
   psoDesc.GS                                 = geometryShaderBytecode;
-  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // type of topology we are drawing
-  psoDesc.RTVFormats[0]         = DXGI_FORMAT_R8G8B8A8_UNORM;             // format of the render target
+  psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT; // type of topology we are drawing
+  psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;          // format of the render target
   psoDesc.SampleDesc = sampleDesc; // must be the same sample description as the swapchain and depth/stencil buffer
   psoDesc.SampleMask = 0xffffffff; // sample mask has to do with multi-sampling. 0xffffffff means point sampling is done
   psoDesc.RasterizerState  = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -375,7 +377,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    imguiAdapter = new ImGuiAdapter(device, frameBufferCount, _hwnd);
+    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
   }
   else
   {
@@ -578,9 +580,8 @@ void Window::mainloop()
   }
 }
 // rotation variables and mouse sensitivity
-// rotation variables and mouse sensitivity
 
-void UpdateRotationFromMouse()
+void Window::UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
   if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
@@ -590,6 +591,7 @@ void UpdateRotationFromMouse()
   if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
   {
     POINT currentMousePos;
+
     GetCursorPos(&currentMousePos);
 
     // Calculate the mouse movement delta
@@ -611,7 +613,7 @@ void UpdateRotationFromMouse()
   }
 }
 // Call function to initialize previous mouse pos
-void InitializeMousePosition()
+void Window::InitializeMousePosition()
 {
   {
     POINT initialMousePos;
@@ -658,10 +660,6 @@ void Window::UpdateCameraPosition()
 void Window::UpdateCameraDirection()
 {
 
-  auto  now    = std::chrono::high_resolution_clock::now();
-  float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before2).count() / 1e9f;
-  before2      = now;
-  /// COULD ALSO NOT HOLD RIGHT BUTTON
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
   {
     POINT currentMousePos;
@@ -672,9 +670,9 @@ void Window::UpdateCameraDirection()
     int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
 
     // Update camera front vector based on mouse movement
-    float sensitivity = 1.0f;
-    yaw += deltaX * sensitivity * deltaS;
-    pitch -= deltaY * sensitivity * deltaS;
+    float sensitivity = 0.05f;
+    yaw += deltaX * sensitivity;
+    pitch -= deltaY * sensitivity;
 
     if (pitch > 89.0f)
       pitch = 89.0f;
@@ -745,8 +743,7 @@ void Window::UpdatePipeline()
   // imgui command list update here
 
   imguiAdapter->startMainImGui();
-  // ImGui::ShowDemoWindow();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
@@ -816,29 +813,26 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 {
   try
   {
+    if (vertices.empty())
+    {
+      throw std::runtime_error("Vertex data is empty.");
+    }
     vBufferSize = vertices.size() * sizeof(Vertex);
     // Create default heap for the vertex buffer
     auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
-    HRESULT hr =
-        device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexBuffer));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer.");
-    }
+   ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vertexBuffer)));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
     // Create upload heap for vertex buffer
     auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     ID3D12Resource* vBufferUploadHeap;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vBufferUploadHeap));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer upload heap.");
-    }
+    ThrowIfFailed(device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vBufferUploadHeap)));
     vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
     // Copy vertex data to upload heap
@@ -862,12 +856,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 
     // Increment fence value
     fenceValue[frameIndex]++;
-    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-    if (FAILED(hr))
-    {
-      _running = false;
-      return false;
-    }
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
     // Create vertex buffer view
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();

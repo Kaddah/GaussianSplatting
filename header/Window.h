@@ -1,5 +1,5 @@
 #pragma once
-#include "WipImgui.h"
+#include "ImguiAdapter.h"
 #include <D3Dcompiler.h>
 #include <Vertex.h>
 #include <Windows.h>
@@ -10,6 +10,7 @@
 #include <wrl/client.h>
 #include <chrono>
 #include <windef.h>
+#include <memory>
 
 using Microsoft::WRL::ComPtr;
 
@@ -42,8 +43,32 @@ public:
 
   void UpdateCameraPosition();
   void UpdateCameraDirection();
+  void UpdateRotationFromMouse();
+  void InitializeMousePosition();
 
 
+  POINT prevMousePosCameraDirection = {0, 0};
+  POINT prevMousePosRotation        = {0, 0};
+  //
+  float alphaX = 0.0f;
+  float alphaY = 0.0f;
+  float alphaZ = 0.0f;
+
+  const float mouseSensX = 0.005f;
+  const float mouseSensY = 0.005f;
+  // Camera position and movement variables
+  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+  glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+  glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
+  float cameraSpeed = 1.0f;  // Camera speed in meters per second
+  float fov         = 45.0f; // Initial zoom level (FOV)
+
+  float nearPlane = 0.1f;
+  float farPlane  = 100.0f;
+
+  float yaw   = -90.0f; // Initialize to face towards negative z-axis
+  float pitch = 0.0f;
 
 protected:
   int  _width;
@@ -51,7 +76,8 @@ protected:
   bool _running;
   bool _fullScreen;
   HWND _hwnd;
-
+ //  POINT                 prevMousePosRotation        = {0, 0};
+  // POINT                 prevMousePosCameraDirection = {0, 0};
   ComPtr<ID3D12Device>         device;
   ComPtr<IDXGISwapChain3>      swapChain;         // swapchain used to switch between render targets
   ComPtr<ID3D12CommandQueue>   commandQueue;      // container for command lists
@@ -75,7 +101,7 @@ protected:
   D3D12_VIEWPORT       viewport;            // area that output from rasterizer will be stretched to.
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
-  ImGuiAdapter* imguiAdapter;
+  std::unique_ptr<ImGuiAdapter> imguiAdapter;
  
 
     std::chrono::high_resolution_clock::time_point before; 
