@@ -50,6 +50,14 @@ int main()
 {
   try
   {
+
+    ComPtr<ID3D12Debug> debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+    {
+      debugController->EnableDebugLayer();
+      std::cout << "Debug layer ENABLED" << std::endl;
+    }
+
     // Initialisiere DirectX 12
     ComPtr<IDXGIFactory4> dxgiFactory;
     HRESULT               hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
