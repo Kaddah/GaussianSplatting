@@ -211,6 +211,8 @@ int main()
     }
     std::cout << "Input buffer created successfully" << std::endl;
 
+    bufferDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
     // Erstellen des Ausgabepuffers
     ComPtr<ID3D12Resource> outputBuffer;
     hr = device->CreateCommittedResource(&heapProps,                            // Heap-Eigenschaften
