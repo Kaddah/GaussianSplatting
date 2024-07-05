@@ -228,6 +228,7 @@ int main()
 
     // Erstelle UAV für den Ausgabepuffer
     D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+    uavDesc.Format                           = DXGI_FORMAT_R32_FLOAT;
     uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
     uavDesc.Buffer.NumElements               = static_cast<UINT>(output.size());
 
