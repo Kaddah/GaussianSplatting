@@ -10,8 +10,8 @@ struct VS_INPUT
     float4 pos : POSITION;
     float4 color : COLOR;
     float3 f_rest[16] : TEXCOORD0;
-    float3 scale[3];
-    float3 rot[4];
+    float3 scale;
+    float4 rot;
 };
 
 struct VS_OUTPUT
@@ -121,7 +121,7 @@ VS_OUTPUT main(VS_INPUT input)
     output.pos = mul(rotationMat, input.pos);
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
     
-    float3x3 cov3d = computeCov3D(g_scale * scale_modifier, g_rot);
+    float3x3 cov3d = computeCov3D(scale, rot);
     float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
     float3 cov2d = computeCov2D(g_pos_view,
                               hfovxy_focal.z,

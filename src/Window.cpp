@@ -6,6 +6,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <wrl/client.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 #include "ImguiAdapter.h"
 #include "Window.h"
@@ -24,12 +26,16 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-struct ConstantBuffer
+
+
+HfovxyFocal calculateHfovxyFocal(float fovy, float _height, float _width)
 {
-  glm::mat4 rotationMat;
-  glm::mat4 projectionMat;
-  glm::mat4 viewMat;
-};
+  HfovxyFocal result;
+  result.htany = tan(fovy / 2.0f);
+  result.htanx = result.htany / _height * _width;
+  result.focal = _height / (2.0f * result.htany);
+  return result;
+}
 
 std::vector<Vertex> quaVerti;
 size_t              vBufferSize;
@@ -729,8 +735,11 @@ void Window::UpdatePipeline()
   // Combine matrices to get mvp
   glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
+  float fovy = M_PI / 2;
+  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);
+
   // Update the constant buffer with mvp
-  UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix);
+  UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix, hfovxy_focal);
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
 
@@ -883,7 +892,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 }
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMat,
-                                  const glm::mat4& viewMat)
+                                  const glm::mat4& viewMat, HfovxyFocal hfovxy_focal)
 {
   if (!constantBuffer[frameIndex])
   {
@@ -894,5 +903,6 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4&
   cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
   cbDataBegin->projectionMat = projectionMat;
   cbDataBegin->viewMat        = viewMat;
+  cbDataBegin->hfovxy_focal  = hfovxy_focal;
   constantBuffer[frameIndex]->Unmap(0, nullptr);
 }

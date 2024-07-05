@@ -16,6 +16,21 @@ using Microsoft::WRL::ComPtr;
 
 constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 
+struct HfovxyFocal
+{
+  float htany;
+  float htanx;
+  float focal;
+};
+
+struct ConstantBuffer
+{
+  glm::mat4   rotationMat;
+  glm::mat4   projectionMat;
+  glm::mat4   viewMat;
+  HfovxyFocal hfovxy_focal
+};
+
 class Window
 {
 public:
@@ -30,7 +45,8 @@ public:
   void                        WaitForPreviousFrame();
   void                        Render();
   void                        mainloop();
-  void                        UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat);
+  void UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat,
+                            HfovxyFocal hfovxy_focal);
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
@@ -114,4 +130,5 @@ protected:
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
   void UpdatePipeline();
+
 };
