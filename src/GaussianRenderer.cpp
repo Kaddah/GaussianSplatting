@@ -39,7 +39,7 @@ void GaussianRenderer::draw()
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST); 
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView);            
     commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());  
-    commandList->DrawInstanced(getQuadVertices().size(), 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
+    commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
 }
     
 std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
