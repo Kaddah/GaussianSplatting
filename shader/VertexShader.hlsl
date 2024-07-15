@@ -122,9 +122,12 @@ VS_OUTPUT main(VS_INPUT input)
     output.pos = mul(rotationMat, input.pos);
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
     
-    float3x3 cov3d = computeCov3D(scale, rot);ss
+    float4 pos_view = mul(viewMat, input.pos);
+    float4 pos_screen = mul(projectionMat, pos_view);
+    
+    float3x3 cov3d = computeCov3D(input.scale, input.rot);
     float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
-    float3 cov2d = computeCov2D(g_pos_view,
+    float3 cov2d = computeCov2D(pos_view,
                               hfovxy_focal.z,
                               hfovxy_focal.z,
                               hfovxy_focal.x,
@@ -140,8 +143,9 @@ VS_OUTPUT main(VS_INPUT input)
     
     float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z)); // screen space half quad height and width
     float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
-    g_pos_screen.xy = g_pos_screen.xy + pos * quadwh_ndc;
-    float coordxy = pos * quadwh_scr;
+    pos_screen.xy = pos_screen.xy + input.pos.xy * quadwh_ndc;
+    float2 coordxy = input.pos.xy * quadwh_scr;
+    
     
     return output;
 }

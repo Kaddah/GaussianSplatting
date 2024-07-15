@@ -52,7 +52,8 @@ void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandL
     ImGui_ImplDX12_RenderDrawData(drawData, commandList.Get());
   }
 }
-void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp)
+void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos,
+                                glm::vec3& cameraFront, glm::vec3& cameraUp)
 {
   ImGui::Begin("Gaussian Splatting");
   ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);

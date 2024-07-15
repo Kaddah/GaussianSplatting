@@ -28,7 +28,7 @@ struct ConstantBuffer
   glm::mat4   rotationMat;
   glm::mat4   projectionMat;
   glm::mat4   viewMat;
-  HfovxyFocal hfovxy_focal
+  HfovxyFocal hfovxy_focal;
 };
 
 class Window
