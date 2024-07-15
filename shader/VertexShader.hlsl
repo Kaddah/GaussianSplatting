@@ -3,6 +3,7 @@ cbuffer ConstantBuffer : register(b0)
     float4x4 rotationMat;
     float4x4 projectionMat;
     float4x4 viewMat;
+    float3 hfovxy_focal;
 };
 
 struct VS_INPUT
@@ -121,7 +122,7 @@ VS_OUTPUT main(VS_INPUT input)
     output.pos = mul(rotationMat, input.pos);
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
     
-    float3x3 cov3d = computeCov3D(scale, rot);
+    float3x3 cov3d = computeCov3D(scale, rot);ss
     float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
     float3 cov2d = computeCov2D(g_pos_view,
                               hfovxy_focal.z,
@@ -133,18 +134,14 @@ VS_OUTPUT main(VS_INPUT input)
 
     // Invert covariance (EWA algorithm)
     float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
-    if (det == 0.0f)
-        gl_Position = float4(0.f, 0.f, 0.f, 0.f);
     
     float det_inv = 1.f / det;
-    conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
+    float3  conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
     
     float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z)); // screen space half quad height and width
     float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
-    g_pos_screen.xy = g_pos_screen.xy + position * quadwh_ndc;
-    coordxy = position * quadwh_scr;
-    gl_Position = g_pos_screen;
-    
+    g_pos_screen.xy = g_pos_screen.xy + pos * quadwh_ndc;
+    float coordxy = pos * quadwh_scr;
     
     return output;
 }
