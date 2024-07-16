@@ -11,8 +11,8 @@ struct VS_INPUT
     float4 pos : POSITION;
     float4 color : COLOR;
     float3 f_rest[16] : TEXCOORD0;
-    float3 scale;
-    float4 rot;
+    float3 scale : TEXCOORD16;
+    float4 rotation : TEXCOORD17;
 };
 
 struct VS_OUTPUT
@@ -125,7 +125,7 @@ VS_OUTPUT main(VS_INPUT input)
     float4 pos_view = mul(viewMat, input.pos);
     float4 pos_screen = mul(projectionMat, pos_view);
     
-    float3x3 cov3d = computeCov3D(input.scale, input.rot);
+    float3x3 cov3d = computeCov3D(input.scale, input.rotation);
     float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
     float3 cov2d = computeCov2D(pos_view,
                               hfovxy_focal.z,
@@ -139,7 +139,7 @@ VS_OUTPUT main(VS_INPUT input)
     float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
     
     float det_inv = 1.f / det;
-    float3  conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
+    float3 conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
     
     float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z)); // screen space half quad height and width
     float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
