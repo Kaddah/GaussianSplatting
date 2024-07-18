@@ -681,14 +681,19 @@ void Window::UpdateCameraDirection()
     if (pitch < -89.0f)
       pitch = -89.0f;
 
+        if (yaw > 360.0f)
+      yaw -= 360.0f;
+    else if (yaw < 0.0f)
+      yaw += 360.0f;
+
     glm::vec3 direction;
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(direction);
+     cameraFront = glm::normalize(direction);
     glm::vec3 cameraRight;
    cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f,1.0f,0.0f))); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
-   cameraUp    = glm::normalize(glm::cross(cameraRight, cameraFront));
+    cameraUp = glm::normalize(glm::cross(cameraRight, cameraFront));
 
     // Update previous mouse position
     prevMousePosCameraDirection = currentMousePos;
@@ -754,11 +759,13 @@ void Window::UpdatePipeline()
   {
     UpdateCameraPosition();
     UpdateCameraDirection();
+    UpdateRotationFromMouse();
   }
   else 
   {
     std::wcout << L"orbiCam is true\n";
     OrbitalCamera();
+    
   }
   // get aspectratio
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
@@ -811,7 +818,7 @@ void Window::UpdatePipeline()
   // imgui command list update here
 
   imguiAdapter->startMainImGui();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,  farPlane,  fov);
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 

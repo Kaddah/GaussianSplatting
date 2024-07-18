@@ -53,13 +53,18 @@ void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandL
   }
 }
 void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos,
-                                glm::vec3& cameraFront, glm::vec3& cameraUp, bool& orbiCam)
+                                glm::vec3& cameraFront, glm::vec3& cameraUp, bool& orbiCam, float& nearPlane,
+                                float& farPlane, float& fov)
 {
   ImGui::Begin("Gaussian Splatting");
  
   ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);
 
   ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
+  ImGui::SliderFloat("nearPlane", &nearPlane, 0.01f, 1.0f);
+  ImGui::SliderFloat("farPlane", &farPlane, 50.0f, 500.0f);
+  ImGui::SliderFloat("FOV", &fov, 30.0f, 110.0f);
+
 
  //ImGui::Checkbox("Orbital Camera on/off", &orbiCam) ;
  // if (ImGui::Button("Switch to OrbiCamera"))
@@ -72,6 +77,11 @@ void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, flo
     cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
 	cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 	cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+    fov   = 45.0f; // Initial zoom level (FOV)
+
+    nearPlane = 0.1f;
+    farPlane  = 100.0f;
+
   }
 
 
