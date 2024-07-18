@@ -201,7 +201,7 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
   {
     propertyReadersBinary["f_rest_" + std::to_string(i)] = [i](char*& data, Vertex& vertex)
     {
-      std::memcpy(&vertex.f_rest[3+i], data, sizeof(float));
+      std::memcpy(&vertex.f_rest[3 + i], data, sizeof(float));
       data += sizeof(float);
     };
   }
@@ -290,7 +290,7 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
                                            propertyReadersAscii[property](iss, vertex);
                                          }
                                        }
-                    
+
                                        vertex.color.r /= 255.0f;
                                        vertex.color.g /= 255.0f;
                                        vertex.color.b /= 255.0f;
@@ -312,8 +312,5 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
   std::chrono::duration<double> duration = endTime - start;
   std::cout << "Time taken to read PLY file: " << duration.count() << " seconds" << std::endl;
 
-
-
   return vertices;
 }
-
