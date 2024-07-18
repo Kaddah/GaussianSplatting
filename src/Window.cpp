@@ -390,9 +390,6 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, computeCommandAllocator.Get(),
                                           computePipelineState.Get(), IID_PPV_ARGS(&computeCommandList)));
   computeCommandList->Close();
-
-    std::string plyFilename = "../assets/file.ply";
-   vertices = PlyReader::readPlyFile(plyFilename);
   
   // Initialize positions for compute shader
   InitializeComputeBuffer(vertices);
@@ -571,15 +568,6 @@ void Window::mainloop()
 {
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
-
-  //  std::cout << "Number of vertices: " << vertices.size() << std::endl;
-  // for (size_t i = 0; i < vertices.size(); ++i)
-  //{
-  //   std::cout << "Vertex " << i << ": pos = (" << vertices[i].pos.x << ", " << vertices[i].pos.y << ", "
-  //             << vertices[i].pos.z << ")" << std::endl;
-  // }
-  std::string plyFilename = "../assets/test_vase.ply";
-  vertices = PlyReader::readPlyFile(plyFilename);
 
   quaVerti = prepareTriangle();
 
@@ -1033,4 +1021,3 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
   CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());
   device->CreateUnorderedAccessView(positionBuffer.Get(), nullptr, &uavDesc, uavHandle);
 }
-
