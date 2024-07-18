@@ -24,21 +24,20 @@ public:
          int     width, // of window
          int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd);
 
-  virtual void draw() = 0;
+  virtual void draw()   = 0;
+  virtual void drawUI() = 0;
   // virtual std::vector<Vertex> prepareTriangle()=0;
-  virtual std::vector<Vertex> prepareTriangle() = 0;
+  virtual std::vector<Vertex>    prepareTriangle()                                   = 0;
   virtual std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices) = 0;
-  void                        Stop();
-  void                        WaitForPreviousFrame();
-  void                        Render();
-  void                        mainloop();
-  void                        UpdateConstantBuffer(const glm::mat4& rotationMat);
+  void                           Stop();
+  void                           WaitForPreviousFrame();
+  void                           Render();
+  void                           mainloop();
+  void                           UpdateConstantBuffer(const glm::mat4& rotationMat);
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
   void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
-
-  
 
   void ResizeWindow(int width, int height);
 

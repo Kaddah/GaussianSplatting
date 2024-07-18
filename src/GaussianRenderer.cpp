@@ -40,30 +40,51 @@ void GaussianRenderer::draw()
   commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());
   commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0); // draw 3 vertices (draw the triangle)
 }
-    
-std::vector<VertexPos> GaussianRenderer::prepareIndices(const std::vector<Vertex>& vertices)
+
+void GaussianRenderer::drawUI()
 {
-    //#xx get indices from ply file
-      // Assuming vertices is a member of GaussianRenderer that contains the Vertex data
-      std::vector<VertexPos> indices;
-      indices.reserve(vertices.size());
-
-      for (size_t i = 0; i < vertices.size(); ++i)
-      {
-        VertexPos vp;
-        vp.position   = vertices[i].pos;          // Copy the position
-        vp.index = static_cast<uint32_t>(i); // Set the index
-        indices.push_back(vp);
-      }
-
-      return indices;
-    
-
+  ImGui::Begin("Gaussian Splatting");
+  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);
+  ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
+  if (ImGui::Button("Reset Camera"))
+  {
+    cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
+    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+  }
+  ImGui::Spacing();
+  ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", alphaX, alphaY, alphaZ);
+  if (ImGui::Button("Reset Object"))
+  {
+    alphaX = 0.0f;
+    alphaY = 0.0f;
+    alphaZ = 0.0f;
+  }
+  ImGui::End();
 }
 
-std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
-    //#12 Access baseVertices from PLY file
-    const std::vector<Vertex>m_Vertices = getVertices();
+std::vector<VertexPos> GaussianRenderer::prepareIndices(const std::vector<Vertex>& vertices)
+{
+  // #xx get indices from ply file
+  //  Assuming vertices is a member of GaussianRenderer that contains the Vertex data
+  std::vector<VertexPos> indices;
+  indices.reserve(vertices.size());
+
+  for (size_t i = 0; i < vertices.size(); ++i)
+  {
+    VertexPos vp;
+    vp.position = vertices[i].pos;          // Copy the position
+    vp.index    = static_cast<uint32_t>(i); // Set the index
+    indices.push_back(vp);
+  }
+
+  return indices;
+}
+
+std::vector<Vertex> GaussianRenderer::prepareTriangle()
+{
+  // #12 Access baseVertices from PLY file
+  const std::vector<Vertex> m_Vertices = getVertices();
   return m_Vertices;
 }
 

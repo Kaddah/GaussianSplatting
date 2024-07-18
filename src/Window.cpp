@@ -19,8 +19,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
-#include <memory>
 #include <PlyReader.h>
+#include <memory>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -32,7 +32,7 @@ struct ConstantBuffer
 
 extern std::vector<Vertex> vertices;
 
-std::vector<Vertex> quaVerti;
+std::vector<Vertex>    quaVerti;
 std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
@@ -40,7 +40,7 @@ ComPtr<ID3D12Resource>       positionBuffer;
 std::vector<VertexPos>       positions;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
-size_t              vBufferSize;
+size_t vBufferSize;
 
 Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd)
     : _width(width)
@@ -60,7 +60,6 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   }
   ShowWindow(_hwnd, SW_SHOW);
 }
-
 
 bool Window::InitD3D()
 {
@@ -305,8 +304,8 @@ bool Window::InitD3D()
   psoDesc.SampleDesc                         = sampleDesc;
   psoDesc.SampleMask                         = 0xffffffff;
   psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  //psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-  psoDesc.NumRenderTargets                   = 1;
+  // psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.NumRenderTargets = 1;
 
   // Blend State konfigurieren
   D3D12_RENDER_TARGET_BLEND_DESC rtvBlendDesc = {};
@@ -320,7 +319,6 @@ bool Window::InitD3D()
   rtvBlendDesc.RenderTargetWriteMask          = D3D12_COLOR_WRITE_ENABLE_ALL;
 
   psoDesc.BlendState.RenderTarget[0] = rtvBlendDesc;
-
 
   ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
@@ -346,11 +344,10 @@ bool Window::InitD3D()
 
   // Create root signature for compute shader
   CD3DX12_ROOT_PARAMETER computeRootParams[3];
-  //computeRootParams[0].InitAsUnorderedAccessView(0);
+  // computeRootParams[0].InitAsUnorderedAccessView(0);
   computeRootParams[0].InitAsConstantBufferView(0);  // cbuffer Constants : register(b0)
-  computeRootParams[1].InitAsShaderResourceView(0); // StructuredBuffer inputPositions : register(t0)
+  computeRootParams[1].InitAsShaderResourceView(0);  // StructuredBuffer inputPositions : register(t0)
   computeRootParams[2].InitAsUnorderedAccessView(0); // RWStructuredBuffer outputPositions : register(u0)
-
 
   CD3DX12_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
   computeRootSignatureDesc.Init(_countof(computeRootParams), computeRootParams, 0, nullptr,
@@ -379,7 +376,6 @@ bool Window::InitD3D()
     return false;
   }
 
-
   // Create compute pipeline state object
   D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
   computePsoDesc.pRootSignature                    = computeRootSignature.Get();
@@ -392,11 +388,10 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, computeCommandAllocator.Get(),
                                           computePipelineState.Get(), IID_PPV_ARGS(&computeCommandList)));
   computeCommandList->Close();
-  
+
   // Initialize positions for compute shader
   InitializeComputeBuffer(vertices);
 
-  
   if (SUCCEEDED(hr))
   {
     imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
@@ -621,7 +616,7 @@ void Window::mainloop()
 
   vertIndex = prepareIndices(quaVerti);
 
-  //InitializeComputeBuffer(vertIndex);
+  // InitializeComputeBuffer(vertIndex);
 
   while (_running)
   {
@@ -810,7 +805,7 @@ void Window::UpdatePipeline()
   // imgui command list update here
 
   imguiAdapter->startMainImGui();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp);
+  drawUI();
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
@@ -821,7 +816,7 @@ void Window::UpdatePipeline()
 
   ThrowIfFailed(commandList->Close());
 
-   // Execute compute shader
+  // Execute compute shader
   ExecuteComputeShader();
 }
 
@@ -871,9 +866,7 @@ void Window::ExecuteComputeShader()
 
   // Increment the fence value for the next frame
   fenceValue[frameIndex]++;
-
 }
-
 
 void Window::WaitForPreviousFrame()
 {
@@ -1016,7 +1009,7 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 
   size_t positionBufferSize = positions.size() * sizeof(VertexPos);
 
- // Create upload heap for initial data
+  // Create upload heap for initial data
   ComPtr<ID3D12Resource> positionUploadBuffer;
   D3D12_HEAP_PROPERTIES  uploadHeapProps  = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   D3D12_RESOURCE_DESC    uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(positionBufferSize);

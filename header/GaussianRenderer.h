@@ -7,9 +7,11 @@ public:
   GaussianRenderer(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd,
                    const std::vector<Vertex>& vertices, const std::vector<Vertex>& quads);
 
-	void draw() override;
-	
-	std::vector<Vertex> prepareTriangle();
+  void draw() override;
+
+  void drawUI();
+
+  std::vector<Vertex>    prepareTriangle();
   std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices);
 
   // Setter method for vertices
