@@ -13,7 +13,7 @@ std::vector<uint32_t> quadIndices;
 GeoGenerator quadGen;
 
 //std::vector<Vertex> m_quadVertices;
-float quadSize = 0.1f;
+//float quadSize = 0.1f;
 
 
 GaussianRenderer::GaussianRenderer(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd, const std::vector<Vertex>& vertices, const std::vector<Vertex>& quads)
@@ -42,6 +42,26 @@ void GaussianRenderer::draw()
     commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0);                                   //draw 3 vertices (draw the triangle)
 }
     
+std::vector<VertexPos> GaussianRenderer::prepareIndices(const std::vector<Vertex>& vertices)
+{
+    //#xx get indices from ply file
+      // Assuming vertices is a member of GaussianRenderer that contains the Vertex data
+      std::vector<VertexPos> indices;
+      indices.reserve(vertices.size());
+
+      for (size_t i = 0; i < vertices.size(); ++i)
+      {
+        VertexPos vp;
+        vp.position   = vertices[i].pos;          // Copy the position
+        vp.index = static_cast<uint32_t>(i); // Set the index
+        indices.push_back(vp);
+      }
+
+      return indices;
+    
+
+}
+
 std::vector<Vertex>  GaussianRenderer::prepareTriangle(){
     //#12 Access baseVertices from PLY file
     const std::vector<Vertex>m_Vertices = getVertices();

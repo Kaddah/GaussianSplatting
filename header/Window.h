@@ -26,6 +26,7 @@ public:
   virtual void draw() = 0;
   // virtual std::vector<Vertex> prepareTriangle()=0;
   virtual std::vector<Vertex> prepareTriangle() = 0;
+  virtual std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices) = 0;
   void                        Stop();
   void                        WaitForPreviousFrame();
   void                        Render();
@@ -34,6 +35,7 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
+  void InitializeComputeBuffer(const std::vector<VertexPos>& vertices);
   
   ~Window();
 

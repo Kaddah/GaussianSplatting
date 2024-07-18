@@ -9,6 +9,7 @@ public:
 	void draw() override;
 	
 	std::vector<Vertex> prepareTriangle();
+  std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices);
 
 	// Setter method for vertices
 	void setVertices(const std::vector<Vertex>& vertices);

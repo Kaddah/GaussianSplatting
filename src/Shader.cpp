@@ -18,6 +18,9 @@ bool CompileShader(const std::wstring& shaderFilePath,
     case ShaderType::Geometry:
       target = "gs_5_0";
       break;
+    case ShaderType::Compute:
+      target = "cs_5_0";
+      break;
     default:
       std::cerr << "Unknown shader type." << std::endl;
       return false;

@@ -90,7 +90,7 @@ foreach(_file IN ITEMS ${LOAD_FILES})
 endforeach(_file)
 
 # Set CMAKE option
-#option(DEFAULT_PLY_FILE "Default PLY file path" "../assets/file.ply")
+#option(DEFAULT_PLY_FILE "Default PLY file path" "../assets/test_vase.ply")
 
 set(DEFAULT_PLY_FILE "../assets/test_vase.ply" CACHE STRING "Default PLY file path")
 

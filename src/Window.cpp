@@ -30,6 +30,8 @@ struct ConstantBuffer
 };
 
 std::vector<Vertex> quaVerti;
+std::vector<VertexPos> vertIndex;
+
 size_t              vBufferSize;
 
 Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd)
@@ -275,6 +277,24 @@ bool Window::InitD3D()
   geometryShaderBytecode.BytecodeLength        = geometryShader->GetBufferSize();
   geometryShaderBytecode.pShaderBytecode       = geometryShader->GetBufferPointer();
 
+
+  // compile compute shader
+  ID3DBlob* computeShader = nullptr;
+
+  std::wcout << L"Compiling Compute shader...\n";
+  if (!CompileShader(L"../shader/ComputeShader.hlsl", ShaderType::Compute, &computeShader, &errorBuff))
+  {
+    std::cerr << "Failed to compile compute shader." << std::endl;
+  }
+
+  // fill out shader bytecode structure for geometry shader
+  D3D12_SHADER_BYTECODE computeShaderBytecode = {};
+  computeShaderBytecode.BytecodeLength        = computeShader->GetBufferSize();
+  computeShaderBytecode.pShaderBytecode       = computeShader->GetBufferPointer();
+
+
+
+
   // create input layout
   D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
@@ -335,8 +355,9 @@ bool Window::InitD3D()
   psoDesc.VS                                 = vertexShaderBytecode;
   psoDesc.PS                                 = pixelShaderBytecode;
   psoDesc.GS                                 = geometryShaderBytecode;
-  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT; // type of topology we are drawing
-  psoDesc.RTVFormats[0]         = DXGI_FORMAT_R8G8B8A8_UNORM;             // format of the render target
+  psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT; // type of topology we are drawing
+  psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;          // format of the render target
+
   psoDesc.SampleDesc = sampleDesc; // must be the same sample description as the swapchain and depth/stencil buffer
   psoDesc.SampleMask = 0xffffffff; // sample mask has to do with multi-sampling. 0xffffffff means point sampling is done
   psoDesc.RasterizerState  = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -557,6 +578,10 @@ void Window::mainloop()
 
   UpdateVertexBuffer(quaVerti);
 
+  vertIndex = prepareIndices(quaVerti);
+
+  InitializeComputeBuffer(vertIndex);
+
   while (_running)
   {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -579,8 +604,8 @@ void Window::mainloop()
     Render(); // execute the command queue
   }
 }
-// rotation variables and mouse sensitivity
 
+// rotation variables and mouse sensitivity
 void Window::UpdateRotationFromMouse()
 {
   // Check if mouse is hovering over ImGui window
@@ -612,6 +637,7 @@ void Window::UpdateRotationFromMouse()
     GetCursorPos(&prevMousePosRotation);
   }
 }
+
 // Call function to initialize previous mouse pos
 void Window::InitializeMousePosition()
 {
@@ -813,29 +839,26 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 {
   try
   {
+    if (vertices.empty())
+    {
+      throw std::runtime_error("Vertex data is empty.");
+    }
     vBufferSize = vertices.size() * sizeof(Vertex);
     // Create default heap for the vertex buffer
     auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
-    HRESULT hr =
-        device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexBuffer));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer.");
-    }
+   ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vertexBuffer)));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
     // Create upload heap for vertex buffer
     auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     ID3D12Resource* vBufferUploadHeap;
-    hr = device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vBufferUploadHeap));
-    if (FAILED(hr))
-    {
-      throw std::runtime_error("Failed to create vertex buffer upload heap.");
-    }
+    ThrowIfFailed(device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&vBufferUploadHeap)));
     vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
     // Copy vertex data to upload heap
@@ -859,12 +882,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 
     // Increment fence value
     fenceValue[frameIndex]++;
-    hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-    if (FAILED(hr))
-    {
-      _running = false;
-      return false;
-    }
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
     // Create vertex buffer view
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
@@ -890,4 +908,70 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
   cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
   constantBuffer[frameIndex]->Unmap(0, nullptr);
+}
+
+void Window::InitializeComputeBuffer(const std::vector<VertexPos>& vertices)
+{
+  // Prepare position and index buffer data
+  std::vector<VertexPos> positions(vertices.size());
+  for (size_t i = 0; i < vertices.size(); ++i)
+  {
+    positions[i].position   = vertices[i].position; // Assuming vertices[i].pos is of type glm::vec3
+    positions[i].index = static_cast<uint32_t>(i);
+  }
+
+  size_t positionBufferSize = positions.size() * sizeof(VertexPos);
+
+// Create default heap for the position buffer
+  D3D12_HEAP_PROPERTIES defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+  D3D12_RESOURCE_DESC   bufferDesc =
+      CD3DX12_RESOURCE_DESC::Buffer(positionBufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+  ComPtr<ID3D12Resource> positionBuffer;
+  HRESULT                hr = device->CreateCommittedResource(&defaultHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                              D3D12_RESOURCE_STATE_COPY_DEST, // Initial state for copying
+                                                              nullptr, IID_PPV_ARGS(&positionBuffer));
+  if (FAILED(hr))
+  {
+    std::cerr << "Failed to create position buffer." << std::endl;
+    return;
+  }
+
+  // Create upload heap for initial data
+ ComPtr<ID3D12Resource> positionUploadBuffer;
+  
+  D3D12_HEAP_PROPERTIES uploadHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+  hr = device->CreateCommittedResource(&uploadHeapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                       D3D12_RESOURCE_STATE_GENERIC_READ, // Upload heap state
+                                       nullptr, IID_PPV_ARGS(&positionUploadBuffer));
+  if (FAILED(hr))
+  {
+    std::cerr << "Failed to create upload buffer." << std::endl;
+    return;
+  }
+  // Copy position data to the upload buffer
+  D3D12_SUBRESOURCE_DATA positionData = {};
+  positionData.pData                  = positions.data();
+  positionData.RowPitch               = positionBufferSize;
+  positionData.SlicePitch             = positionBufferSize;
+
+  UpdateSubresources(commandList.Get(), positionBuffer.Get(), positionUploadBuffer.Get(), 0, 0, 1, &positionData);
+
+  // Create a descriptor heap for UAVs
+  D3D12_DESCRIPTOR_HEAP_DESC uavHeapDesc = {};
+  uavHeapDesc.NumDescriptors             = 1; // Number of UAVs
+  uavHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+  uavHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+  ComPtr<ID3D12DescriptorHeap> uavHeap;
+  device->CreateDescriptorHeap(&uavHeapDesc, IID_PPV_ARGS(&uavHeap));
+
+  // Create UAV for the position buffer
+  D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+  uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
+  uavDesc.Buffer.NumElements               = static_cast<UINT>(positions.size());
+  uavDesc.Buffer.StructureByteStride       = sizeof(VertexPos);
+
+  CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());
+  device->CreateUnorderedAccessView(positionBuffer.Get(), nullptr, &uavDesc, uavHandle);
 }
