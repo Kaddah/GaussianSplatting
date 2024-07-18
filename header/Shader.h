@@ -7,7 +7,8 @@
 enum class ShaderType {
 	Vertex,
 	Pixel,
-	Geometry
+	Geometry,
+	Compute
 };
 
 bool CompileShader(const std::wstring& shaderFilePath, 
