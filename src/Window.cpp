@@ -976,7 +976,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
-   ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+    ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                   D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                   IID_PPV_ARGS(&vertexBuffer)));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");

@@ -1,14 +1,14 @@
 #ifndef PLY_READER_H
 #define PLY_READER_H
 
+#include "Vertex.h"
 #include <string>
 #include <vector>
-#include "Vertex.h"
 
-class PlyReader {
+class PlyReader
+{
 public:
-    static std::vector<Vertex> readPlyFile(const std::string& filename);
-   
+  static std::vector<Vertex> readPlyFile(const std::string& filename);
 };
 
 #endif // PLY_READER_H

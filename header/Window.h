@@ -3,14 +3,14 @@
 #include <D3Dcompiler.h>
 #include <Vertex.h>
 #include <Windows.h>
+#include <chrono>
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
-#include <wrl/client.h>
-#include <chrono>
-#include <windef.h>
 #include <memory>
+#include <windef.h>
+#include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -34,16 +34,8 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
-  void CreateRenderTargetViews();
-  void UpdateViewportAndScissorRect(int newWidth, int newHeight);
-  void UpdateProjectionMatrix(int newWidth, int newHeight);
-  
-  ~Window();
-  void ResizeWindow(int newWidth, int newHeight);
-  bool IsD3DInitialized() const;   
-  void WaitForGPU(int frameIndex);
-  void CleanupRenderTarget();
 
+  ~Window();
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
@@ -53,7 +45,6 @@ public:
   void UpdateCameraDirection();
   void UpdateRotationFromMouse();
   void InitializeMousePosition();
-
 
   POINT prevMousePosCameraDirection = {0, 0};
   POINT prevMousePosRotation        = {0, 0};
@@ -65,7 +56,7 @@ public:
   const float mouseSensX = 0.005f;
   const float mouseSensY = 0.005f;
   // Camera position and movement variables
-  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+  glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
   glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
   glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -79,15 +70,12 @@ public:
   float pitch = 0.0f;
 
 protected:
-  int currentFrameIndex;
-
-  bool _d3dInitialized = false;
   int  _width;
   int  _height;
   bool _running;
   bool _fullScreen;
   HWND _hwnd;
- //  POINT                 prevMousePosRotation        = {0, 0};
+  //  POINT                 prevMousePosRotation        = {0, 0};
   // POINT                 prevMousePosCameraDirection = {0, 0};
   ComPtr<ID3D12Device>         device;
   ComPtr<IDXGISwapChain3>      swapChain;         // swapchain used to switch between render targets
@@ -113,13 +101,9 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   std::unique_ptr<ImGuiAdapter> imguiAdapter;
- 
 
-    std::chrono::high_resolution_clock::time_point before; 
-    std::chrono::high_resolution_clock::time_point before2; 
-
-
-  
+  std::chrono::high_resolution_clock::time_point before;
+  std::chrono::high_resolution_clock::time_point before2;
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
