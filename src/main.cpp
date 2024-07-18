@@ -79,10 +79,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
   vertices = PlyReader::readPlyFile(plyFilename);
 
+ 
+    //std::cout << "Number of vertices: " << vertices.size() << std::endl;
+    //for (size_t i = 0; i < vertices.size(); ++i)
+    //{
+    //  std::cout << "Vertex " << i << ": pos = (" << vertices[i].pos.x << ", " << vertices[i].pos.y << ", "
+    //            << vertices[i].pos.z << ")" << std::endl;
+    //}
+  
+
   try
   {
     GaussianRenderer window(L"Triangle", 800, 600, false, hInstance, nShowCmd, vertices, quads);
     // start the main loop
+
     window.mainloop();
   }
   catch (const DxException& e)
