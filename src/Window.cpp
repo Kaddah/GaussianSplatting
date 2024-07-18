@@ -30,6 +30,7 @@ struct ConstantBuffer
   glm::mat4 rotationMat;
 };
 
+extern std::vector<Vertex> vertices;
 
 std::vector<Vertex> quaVerti;
 std::vector<VertexPos> vertIndex;

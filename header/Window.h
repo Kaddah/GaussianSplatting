@@ -19,9 +19,6 @@ constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 
 class Window
 {
 
- private:
-  std::vector<Vertex> vertices;
-
 public:
   Window(LPCTSTR WindowName,
          int     width, // of window

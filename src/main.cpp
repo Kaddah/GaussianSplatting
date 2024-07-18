@@ -65,12 +65,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   }
 
   // #10 start to import PLY file - MH
-  // std::string plyFilename = "../triangle-data-test.ply";
-  // std::string plyFilename = "../bycicle-test.ply";
-  // std::string plyFilename = "../assets/file.ply";
-
   // default if exe get no argument
-  std::string plyFilename = "../assets/file.ply";
+  std::string plyFilename = "../assets/vase_test.ply";
   if (strlen(lpCmdLine) > 0)
   {
     // set path to given argument (if run in Visual Studio the argument is set by CMake File to "../assets/file.ply")
@@ -78,15 +74,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   }
 
   vertices = PlyReader::readPlyFile(plyFilename);
-
- 
-    //std::cout << "Number of vertices: " << vertices.size() << std::endl;
-    //for (size_t i = 0; i < vertices.size(); ++i)
-    //{
-    //  std::cout << "Vertex " << i << ": pos = (" << vertices[i].pos.x << ", " << vertices[i].pos.y << ", "
-    //            << vertices[i].pos.z << ")" << std::endl;
-    //}
-  
 
   try
   {
