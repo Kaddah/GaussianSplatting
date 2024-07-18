@@ -48,6 +48,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
+  ShowWindow(_hwnd, SW_SHOW);
 }
 
 bool Window::InitD3D()
@@ -426,6 +427,44 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
   return rtvHandle;
 }
 
+void Window::ResizeWindow(int width, int height)
+{
+  _width  = width;
+  _height = height;
+
+  viewport.Width     = _width;
+  viewport.Height    = _height;
+  scissorRect.right  = _width;
+  scissorRect.bottom = _height;
+
+  for (int i = 0; i < frameBufferCount; ++i)
+  {
+    ThrowIfFailed(commandQueue->Signal(fence[i].Get(), ++fenceValue[i]));
+    if (fence[i]->GetCompletedValue() < fenceValue[i])
+    {
+      ThrowIfFailed(fence[i]->SetEventOnCompletion(fenceValue[i], fenceEvent));
+      WaitForSingleObject(fenceEvent, INFINITE);
+    }
+  }
+
+  for (int i = 0; i < frameBufferCount; ++i)
+  {
+    renderTargets[i].Reset();
+  }
+
+  DXGI_SWAP_CHAIN_DESC desc = {};
+  ThrowIfFailed(swapChain->GetDesc(&desc));
+  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, width, height, desc.BufferDesc.Format, desc.Flags));
+
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  for (UINT i = 0; i < frameBufferCount; i++)
+  {
+    ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+    device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+  }
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
   extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -458,6 +497,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
       }
       return 0;
+    case WM_SIZE:
+      if (window)
+      {
+        int width  = LOWORD(lParam);
+        int height = HIWORD(lParam);
+        window->ResizeWindow(width, height);
+      }
+      break;
 
     case WM_DESTROY: // x button on top right corner of window was pressed
       window->Stop();
@@ -516,9 +563,6 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     SetWindowLong(_hwnd, GWL_STYLE, 0);
   }
 
-  ShowWindow(_hwnd, ShowWnd);
-  UpdateWindow(_hwnd);
-
   return true;
 }
 
@@ -533,8 +577,7 @@ void Window::Render()
   // execute the array of command lists
   commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-  hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-  if (FAILED(hr))
+  if (FAILED(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex])))
   {
     _running = false;
   }
