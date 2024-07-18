@@ -62,10 +62,11 @@ void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, flo
   ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
 
  //ImGui::Checkbox("Orbital Camera on/off", &orbiCam) ;
-  if (ImGui::Button("Switch to OrbiCamera"))
-  {
-    orbiCam = true;
-  }
+ // if (ImGui::Button("Switch to OrbiCamera"))
+ // {
+  //  orbiCam = true;
+ // }
+  ImGui::Checkbox("Orbital Camera", &orbiCam);
   if (ImGui::Button("Reset Camera"))
   {
     cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);

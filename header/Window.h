@@ -54,7 +54,8 @@ public:
  // };
   //CameraMode cameraMode = CameraMode::Normal;
 
-  bool  orbiCam                     = false;
+  bool orbiCam = false;
+  
 
   POINT prevMousePosCameraDirection = {0, 0};
   POINT prevMousePosRotation        = {0, 0};

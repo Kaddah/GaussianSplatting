@@ -749,7 +749,7 @@ void Window::UpdatePipeline()
   // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
-    if (orbiCam = false)
+    if (orbiCam == false)
   {
     UpdateCameraPosition();
     UpdateCameraDirection();
@@ -783,7 +783,7 @@ void Window::UpdatePipeline()
 
    glm::mat4 transformMat;
   
-  if (orbiCam = false)
+  if (orbiCam == false)
   {
     transformMat = mvpMat;
   }
