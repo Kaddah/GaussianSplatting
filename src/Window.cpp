@@ -27,7 +27,6 @@ using Microsoft::WRL::ComPtr;
 struct ConstantBuffer
 {
   glm::mat4 rotationMat;
-  glm::mat4 projectionMat;
 };
 
 std::vector<Vertex> quaVerti;
@@ -41,28 +40,15 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , _fullScreen(fullScreen) // initializer list
 
 {
-    // Initialize fence values
-    for (int i = 0; i < frameBufferCount; i++)
-    {
-	fenceValue[i] = 0;
-    }
-
-
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
-    MessageBox(0, L"Failed to create window", L"Error", MB_OK);
-    _d3dInitialized = false;
-    return;
+    throw std::runtime_error("Failed to initialize window");
   }
-  if (!(_d3dInitialized = InitD3D()))
+  if (!InitD3D())
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
-}
-
-bool Window::IsD3DInitialized() const
-{
-  return _d3dInitialized;
+  ShowWindow(_hwnd, SW_SHOW);
 }
 
 bool Window::InitD3D()
@@ -82,7 +68,9 @@ bool Window::InitD3D()
   // Create Device
   IDXGIFactory4* dxgiFactory;
   ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
+
   IDXGIAdapter1* adapter; // adapter = graphics card
+
   int  adapterIndex = 0;
   bool adapterFound = false;
 
@@ -160,7 +148,7 @@ bool Window::InitD3D()
   // This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from
   // the pipeline otherwise set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
   rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
+  hr                = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
   if (FAILED(hr))
   {
     return false;
@@ -420,33 +408,6 @@ void Window::Stop()
   _running = false;
 }
 
-void Window::ResizeWindow(int newWidth, int newHeight)
-{
-  // don't allow 0 size window
-  if (newWidth == 0 || newHeight == 0 || !IsD3DInitialized())
-    return;
-
-  WaitForGPU(currentFrameIndex); // Ensure that the GPU is finished with the resources
-  std::cout << "Wait for GPU done" << std::endl;
-  
-  CleanupRenderTarget(); // release the old rtv, so the resources can be freed
-  std::cout << "Cleanup Render Target done" << std::endl;
-
-  // Resize the swap chain
-  DXGI_SWAP_CHAIN_DESC desc = {};
-  swapChain->GetDesc(&desc);
-  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, newWidth, newHeight, desc.BufferDesc.Format, desc.Flags));
-  std::cout << "Resize Buffers done" << std::endl;
-
-
-  CreateRenderTargetViews(); // create new render target views
-  std::cout << "Create Render Target Views done" << std::endl;
-  UpdateViewportAndScissorRect(newWidth, newHeight);
-  std::cout << "Update Viewport and Scissor Rect done" << std::endl;
-  UpdateProjectionMatrix(newWidth, newHeight);
-  std::cout << "Update Projection Matrix done" << std::endl;
-}
-
 Window::~Window()
 {
   // Cleanup
@@ -459,114 +420,49 @@ Window::~Window()
   CloseHandle(fenceEvent);
 }
 
-void Window::UpdateViewportAndScissorRect(int newWidth, int newHeight)
-{
-  // Update the viewport
-  D3D12_VIEWPORT viewport = {};
-  viewport.TopLeftX       = 0;
-  viewport.TopLeftY       = 0;
-  viewport.Width = static_cast<float>(newWidth);
-  viewport.Height = static_cast<float>(newHeight);
-  viewport.MinDepth = 0.0f;
-  viewport.MaxDepth = 1.0f;
-
-  // Update the scissor rect
-  D3D12_RECT scissorRect = {};
-  scissorRect.left = 0;
-  scissorRect.top = 0;
-  scissorRect.right      = static_cast<LONG>(newWidth);
-  scissorRect.bottom     = static_cast<LONG>(newHeight);
-  
-  // Set the viewport and scissor rect in the command list
-  commandList->RSSetViewports(1, &viewport);
-  commandList->RSSetScissorRects(1, &scissorRect);
-}
-
-void Window::UpdateProjectionMatrix(int newWidth, int newHeight)
-{
-    // code is repeating here, but it is necessary to update the projection matrix (i guess)
-    float aspectRatio = static_cast<float>(newWidth) / static_cast<float>(newHeight);
-
-    // Create individual rotation matrices for each axis
-    glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
-
-    glm::mat4 rotationMat = rotationZ * rotationY * rotationX; // Combine the rotations
-
-    glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane); // near plane 0.1f farplane 100.0f
-    glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;            // Combine matrices to get mvp
-
-    UpdateConstantBuffer(projectionMatrix);
-}
-
-void Window::CreateRenderTargetViews()
-{
-    // describe an rtv descriptor heap and create
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = frameBufferCount;
-    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    rtvHeapDesc.NodeMask                   = 0;
-    ThrowIfFailed(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap)));
-
-    rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-    for (int i = 0; i < frameBufferCount; i++)
-    {
-        ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
-      device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
-		rtvHandle.Offset(1, rtvDescriptorSize);
-    }
-}
-
-void Window::CleanupRenderTarget()
-{
-    for (int i = 0; i < frameBufferCount; i++)
-    {
-        if (renderTargets[i])
-		    renderTargets[i].Reset();
-        rtvDescriptorHeap.Reset();
-	}
-}
-
-void Window::WaitForGPU(int frameIndex)
-{
-  for (int i = 0; i < frameBufferCount; i++)
-  {
-    //// Signal and increment the fence value
-    //const UINT64 currentFenceValue = fenceValue[i];
-    //ThrowIfFailed(commandQueue->Signal(fence[i].Get(), currentFenceValue));
-
-    //// Wait until GPU has completed commands up to this fence point
-    //ThrowIfFailed(fence[i]->SetEventOnCompletion(currentFenceValue, fenceEvent));
-    //WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
-
-    //// increment fence value for next frame
-    //fenceValue[i]++;
-
-      //signal and increment the fence value for the current frame
-      const UINT64 currentFenceValue = fenceValue[frameIndex];
-      ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), currentFenceValue));
-
-      //wait until the GPU has completed commands up to this fence point
-      if (fence[frameIndex]->GetCompletedValue() < currentFenceValue)
-      {
-		  ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent));
-		  WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);
-	  }
-      //increment fence value for the current frame
-	  fenceValue[frameIndex]++;
-  }
-}
-
 CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 {
   CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex,
                                           rtvDescriptorSize);
   return rtvHandle;
+}
+
+void Window::ResizeWindow(int width, int height)
+{
+  _width  = width;
+  _height = height;
+
+  viewport.Width     = _width;
+  viewport.Height    = _height;
+  scissorRect.right  = _width;
+  scissorRect.bottom = _height;
+
+  for (int i = 0; i < frameBufferCount; ++i)
+  {
+    ThrowIfFailed(commandQueue->Signal(fence[i].Get(), ++fenceValue[i]));
+    if (fence[i]->GetCompletedValue() < fenceValue[i])
+    {
+      ThrowIfFailed(fence[i]->SetEventOnCompletion(fenceValue[i], fenceEvent));
+      WaitForSingleObject(fenceEvent, INFINITE);
+    }
+  }
+
+  for (int i = 0; i < frameBufferCount; ++i)
+  {
+    renderTargets[i].Reset();
+  }
+
+  DXGI_SWAP_CHAIN_DESC desc = {};
+  ThrowIfFailed(swapChain->GetDesc(&desc));
+  ThrowIfFailed(swapChain->ResizeBuffers(frameBufferCount, width, height, desc.BufferDesc.Format, desc.Flags));
+
+  CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  for (UINT i = 0; i < frameBufferCount; i++)
+  {
+    ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+    device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
+    rtvHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+  }
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -601,9 +497,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
       }
       return 0;
-
-      case WM_SIZE:
-      if (window && window->IsD3DInitialized())
+    case WM_SIZE:
+      if (window)
       {
         int width  = LOWORD(lParam);
         int height = HIWORD(lParam);
@@ -668,9 +563,6 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     SetWindowLong(_hwnd, GWL_STYLE, 0);
   }
 
-  ShowWindow(_hwnd, ShowWnd);
-  UpdateWindow(_hwnd);
-
   return true;
 }
 
@@ -685,8 +577,7 @@ void Window::Render()
   // execute the array of command lists
   commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-  hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
-  if (FAILED(hr))
+  if (FAILED(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex])))
   {
     _running = false;
   }
@@ -719,6 +610,7 @@ void Window::mainloop()
         _running = false;
         break;
       }
+
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
@@ -727,14 +619,8 @@ void Window::mainloop()
     {
       break;
     }
-    currentFrameIndex = swapChain->GetCurrentBackBufferIndex(); // get current frame index from the swap chain
+
     Render(); // execute the command queue
-
-    // Signal and wait for GPU as necessary
-    //WaitForGPU(currentFrameIndex);
-
-    // present the frame
-    swapChain->Present(1, 0);
   }
 }
 // rotation variables and mouse sensitivity
@@ -869,22 +755,26 @@ void Window::UpdatePipeline()
   UpdateRotationFromMouse();
   UpdateCameraPosition();
   UpdateCameraDirection();
-  
-  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height); // get aspectratio
-  
+  // get aspectratio
+  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
   glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
-  
-  glm::mat4 rotationMat = rotationZ * rotationY * rotationX; // Combine the rotations
+
+  // Combine the rotations
+  glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
 
   glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane); // near plane 0.1f farplane 100.0f
-  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat; // Combine matrices to get mvp
+  // near plane 0.1f farplane 100.0f
+  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
+  // Combine matrices to get mvp
+  glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
-  UpdateConstantBuffer(mvpMat); // Update the constant buffer with mvp
-  InitializeMousePosition(); // Call this onc  to set the initial mouse position
+  // Update the constant buffer with mvp
+  UpdateConstantBuffer(mvpMat);
+  // Call this onc  to set the initial mouse position
+  InitializeMousePosition();
 
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
