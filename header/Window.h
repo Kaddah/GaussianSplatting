@@ -18,6 +18,10 @@ constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 
 
 class Window
 {
+
+ private:
+  std::vector<Vertex> vertices;
+
 public:
   Window(LPCTSTR WindowName,
          int     width, // of window
@@ -35,7 +39,7 @@ public:
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
-  void InitializeComputeBuffer(const std::vector<VertexPos>& vertices);
+  void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
   
   ~Window();
 
@@ -94,6 +98,12 @@ protected:
   ComPtr<ID3D12Resource>       constantBuffer[frameBufferCount];
   ComPtr<ID3D12DescriptorHeap> cbvHeap;
 
+  // compute shader pipeline
+  ComPtr<ID3D12PipelineState>       computePipelineState;
+  ComPtr<ID3D12RootSignature>       computeRootSignature;
+  ComPtr<ID3D12CommandAllocator>    computeCommandAllocator;
+  ComPtr<ID3D12GraphicsCommandList> computeCommandList;
+
   HANDLE fenceEvent;                   // a handle to an event when our fence is unlocked by the gpu
   UINT64 fenceValue[frameBufferCount]; // this value is incremented each frame. each fence will have its own value
   int    frameIndex;                   // current rtv we are on
@@ -116,4 +126,5 @@ protected:
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
   void UpdatePipeline();
+  void ExecuteComputeShader();
 };
