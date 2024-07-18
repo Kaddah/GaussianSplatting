@@ -303,8 +303,22 @@ bool Window::InitD3D()
   psoDesc.SampleDesc                         = sampleDesc;
   psoDesc.SampleMask                         = 0xffffffff;
   psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  //psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   psoDesc.NumRenderTargets                   = 1;
+
+  // Blend State konfigurieren
+  D3D12_RENDER_TARGET_BLEND_DESC rtvBlendDesc = {};
+  rtvBlendDesc.BlendEnable                    = TRUE;
+  rtvBlendDesc.SrcBlend                       = D3D12_BLEND_SRC_ALPHA;
+  rtvBlendDesc.DestBlend                      = D3D12_BLEND_INV_SRC_ALPHA;
+  rtvBlendDesc.BlendOp                        = D3D12_BLEND_OP_ADD;
+  rtvBlendDesc.SrcBlendAlpha                  = D3D12_BLEND_ONE;
+  rtvBlendDesc.DestBlendAlpha                 = D3D12_BLEND_ZERO;
+  rtvBlendDesc.BlendOpAlpha                   = D3D12_BLEND_OP_ADD;
+  rtvBlendDesc.RenderTargetWriteMask          = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+  psoDesc.BlendState.RenderTarget[0] = rtvBlendDesc;
+
 
   ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject)));
 
@@ -791,6 +805,11 @@ void Window::ExecuteComputeShader()
   ID3D12DescriptorHeap* ppHeaps[] = {uavHeap.Get()};
   computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
+  // Transition the position buffer to UAV state
+  CD3DX12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      positionBuffer.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+  computeCommandList->ResourceBarrier(1, &uavBarrier);
+
   // Set compute root signature
   computeCommandList->SetComputeRootSignature(computeRootSignature.Get());
 
@@ -800,19 +819,29 @@ void Window::ExecuteComputeShader()
   // Dispatch compute shader
   computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(positions.size()) / 256.0f)), 1, 1);
 
+  // Transition the position buffer back to UAV state
+  uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                                    D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+  computeCommandList->ResourceBarrier(1, &uavBarrier);
+
   // Close and execute compute command list
   ThrowIfFailed(computeCommandList->Close());
   ID3D12CommandList* ppCommandLists[] = {computeCommandList.Get()};
   computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-  // Synchronize the command queues
+  // Signal and wait for the compute queue
   ThrowIfFailed(computeCommandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
   if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
   {
     ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent));
     WaitForSingleObject(fenceEvent, INFINITE);
   }
+
+  // Increment the fence value for the next frame
+  fenceValue[frameIndex]++;
+
 }
+
 
 void Window::WaitForPreviousFrame()
 {
@@ -1004,3 +1033,4 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
   CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());
   device->CreateUnorderedAccessView(positionBuffer.Get(), nullptr, &uavDesc, uavHandle);
 }
+

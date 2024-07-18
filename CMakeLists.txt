@@ -100,26 +100,3 @@ message(STATUS "Default PLY file: ${DEFAULT_PLY_FILE}")
 # Set the CMake option as target argument for the debugger
 set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "${DEFAULT_PLY_FILE}")
 
-
-# Configure ComputeExample executable
-file(GLOB COMPUTE_FILES "compute/*.cpp" "compute/*.hlsl")
-add_executable(ComputeExample ${COMPUTE_FILES})
-
-source_group("Source Files/compute" FILES ${COMPUTE_FILES})
-
-target_link_libraries(ComputeExample PRIVATE
-    Microsoft::DirectXTK12
-    glm::glm
-    imgui::imgui
-    d3d12.lib
-    dxgi.lib
-    d3dcompiler.lib)
-
-target_include_directories(ComputeExample PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compute)
-
-# Ensure compute.hlsl is compiled as a compute shader
-set_source_files_properties(compute/compute.hlsl PROPERTIES
-    VS_SHADER_TYPE Compute
-    VS_SHADER_MODEL 5.1
-    VS_SHADER_ENTRYPOINT main
-)
