@@ -5,7 +5,7 @@ class GaussianRenderer : public Window
 {
 public:
   GaussianRenderer(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd,
-                   const std::vector<Vertex>& vertices, const std::vector<Vertex>& quads);
+                   const std::vector<Vertex>& vertices);
 
   void draw() override;
 

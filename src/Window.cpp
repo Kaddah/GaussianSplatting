@@ -32,12 +32,11 @@ struct ConstantBuffer
 
 extern std::vector<Vertex> vertices;
 
-std::vector<Vertex>    quaVerti;
 std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
 ComPtr<ID3D12Resource>       positionBuffer;
-std::vector<VertexPos>       positions;
+std::vector<VertexPos>       indices;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
 size_t vBufferSize;
@@ -608,15 +607,14 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-  quaVerti = prepareTriangle();
 
-  InitializeVertexBuffer(quaVerti);
+  InitializeVertexBuffer(vertices);
 
-  UpdateVertexBuffer(quaVerti);
+  UpdateVertexBuffer(vertices);
 
-  vertIndex = prepareIndices(quaVerti);
+  vertIndex = prepareIndices(vertices);
 
-  // InitializeComputeBuffer(vertIndex);
+   //InitializeComputeBuffer(vertIndex);
 
   while (_running)
   {
@@ -844,7 +842,7 @@ void Window::ExecuteComputeShader()
   computeCommandList->SetComputeRootUnorderedAccessView(0, positionBuffer->GetGPUVirtualAddress());
 
   // Dispatch compute shader
-  computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(positions.size()) / 256.0f)), 1, 1);
+  computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(indices.size()) / 256.0f)), 1, 1);
 
   // Transition the position buffer back to UAV state
   uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
@@ -1000,14 +998,14 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat)
 void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 {
   // Prepare position and index buffer data
-  std::vector<VertexPos> positions(vertices.size());
+  std::vector<VertexPos> indices(vertices.size());
   for (size_t i = 0; i < vertices.size(); ++i)
   {
-    positions[i].position = vertices[i].pos;
-    positions[i].index    = static_cast<uint32_t>(i);
+    indices[i].position = vertices[i].pos;
+    indices[i].index    = static_cast<uint32_t>(i);
   }
 
-  size_t positionBufferSize = positions.size() * sizeof(VertexPos);
+  size_t positionBufferSize = indices.size() * sizeof(VertexPos);
 
   // Create upload heap for initial data
   ComPtr<ID3D12Resource> positionUploadBuffer;
@@ -1021,7 +1019,7 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
   // Copy position data to the upload buffer
   void* pData;
   ThrowIfFailed(positionUploadBuffer->Map(0, nullptr, &pData));
-  memcpy(pData, positions.data(), positionBufferSize);
+  memcpy(pData, indices.data(), positionBufferSize);
   positionUploadBuffer->Unmap(0, nullptr);
 
   // Create default heap for the position buffer
@@ -1052,7 +1050,7 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
   // Create UAV for the position buffer
   D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
   uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
-  uavDesc.Buffer.NumElements               = static_cast<UINT>(positions.size());
+  uavDesc.Buffer.NumElements               = static_cast<UINT>(indices.size());
   uavDesc.Buffer.StructureByteStride       = sizeof(VertexPos);
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());

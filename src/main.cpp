@@ -10,7 +10,7 @@
 #include <iostream>
 
 std::vector<Vertex> vertices;
-std::vector<Vertex> quads;
+//std::vector<Vertex> quads;
 // GaussianRenderer window;
 
 void attachConsole()
@@ -77,7 +77,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
   try
   {
-    GaussianRenderer window(L"Triangle", 800, 600, false, hInstance, nShowCmd, vertices, quads);
+    GaussianRenderer window(L"Gaussian Splatting", 800, 600, false, hInstance, nShowCmd, vertices);
     // start the main loop
 
     window.mainloop();

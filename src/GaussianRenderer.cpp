@@ -1,20 +1,15 @@
 #include "GaussianRenderer.h"
 #include "Window.h"
 #include <DxException.h>
-#include <GeoGenerator.h>
 #include <iostream>
 
 // #12 Create Quad generator parameters - MH
-// std::vector<Vertex> quadVertices;
 std::vector<uint32_t> quadIndices;
 
-GeoGenerator quadGen;
-
-// std::vector<Vertex> m_quadVertices;
 float quadSize = 0.1f;
 
 GaussianRenderer::GaussianRenderer(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance,
-                                   int nShowCmd, const std::vector<Vertex>& vertices, const std::vector<Vertex>& quads)
+                                   int nShowCmd, const std::vector<Vertex>& vertices)
     : Window(WindowName, width, height, fullScreen, hInstance, nShowCmd)
     , m_vertices(vertices)
     , m_quads(vertices)
