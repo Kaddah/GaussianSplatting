@@ -3,14 +3,14 @@
 #include <D3Dcompiler.h>
 #include <Vertex.h>
 #include <Windows.h>
+#include <chrono>
 #include <d3d12.h>
 #include <d3dx12.h>
 #include <dxgi1_4.h>
 #include <glm/glm.hpp>
-#include <wrl/client.h>
-#include <chrono>
-#include <windef.h>
 #include <memory>
+#include <windef.h>
+#include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -33,24 +33,29 @@ struct ConstantBuffer
 
 class Window
 {
+
 public:
   Window(LPCTSTR WindowName,
          int     width, // of window
          int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd);
 
-  virtual void draw() = 0;
-  // virtual std::vector<Vertex> prepareTriangle()=0;
-  virtual std::vector<Vertex> prepareTriangle() = 0;
-  void                        Stop();
-  void                        WaitForPreviousFrame();
-  void                        Render();
-  void                        mainloop();
+  virtual void draw()   = 0;
+  virtual void drawUI() = 0;
   void UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat,
                             HfovxyFocal hfovxy_focal);
+  virtual std::vector<Vertex>    prepareTriangle()                                   = 0;
+  virtual std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices) = 0;
+  void                           Stop();
+  void                           WaitForPreviousFrame();
+  void                           Render();
+  void                           mainloop();
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
-  
+  void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
+
+  void ResizeWindow(int width, int height);
+
   ~Window();
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
@@ -62,7 +67,6 @@ public:
   void UpdateRotationFromMouse();
   void InitializeMousePosition();
 
-
   POINT prevMousePosCameraDirection = {0, 0};
   POINT prevMousePosRotation        = {0, 0};
   //
@@ -73,7 +77,7 @@ public:
   const float mouseSensX = 0.005f;
   const float mouseSensY = 0.005f;
   // Camera position and movement variables
-  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+  glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
   glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
   glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -92,7 +96,7 @@ protected:
   bool _running;
   bool _fullScreen;
   HWND _hwnd;
- //  POINT                 prevMousePosRotation        = {0, 0};
+  //  POINT                 prevMousePosRotation        = {0, 0};
   // POINT                 prevMousePosCameraDirection = {0, 0};
   ComPtr<ID3D12Device>         device;
   ComPtr<IDXGISwapChain3>      swapChain;         // swapchain used to switch between render targets
@@ -108,6 +112,12 @@ protected:
   ComPtr<ID3D12Resource>       constantBuffer[frameBufferCount];
   ComPtr<ID3D12DescriptorHeap> cbvHeap;
 
+  // compute shader pipeline
+  ComPtr<ID3D12PipelineState>       computePipelineState;
+  ComPtr<ID3D12RootSignature>       computeRootSignature;
+  ComPtr<ID3D12CommandAllocator>    computeCommandAllocator;
+  ComPtr<ID3D12GraphicsCommandList> computeCommandList;
+
   HANDLE fenceEvent;                   // a handle to an event when our fence is unlocked by the gpu
   UINT64 fenceValue[frameBufferCount]; // this value is incremented each frame. each fence will have its own value
   int    frameIndex;                   // current rtv we are on
@@ -118,17 +128,13 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   std::unique_ptr<ImGuiAdapter> imguiAdapter;
- 
 
-    std::chrono::high_resolution_clock::time_point before; 
-    std::chrono::high_resolution_clock::time_point before2; 
-
-
-  
+  std::chrono::high_resolution_clock::time_point before;
+  std::chrono::high_resolution_clock::time_point before2;
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
 
   void UpdatePipeline();
-
+  void ExecuteComputeShader();
 };
