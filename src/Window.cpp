@@ -256,7 +256,7 @@ bool Window::InitD3D()
   computeShaderBytecode.BytecodeLength        = computeShader->GetBufferSize();
   computeShaderBytecode.pShaderBytecode       = computeShader->GetBufferPointer();
 
-  D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+ D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        0},
       {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
@@ -298,6 +298,8 @@ bool Window::InitD3D()
       {"TEXCOORD", 16, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, scale),
        D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
       {"TEXCOORD", 17, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex, rotation),
+       D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+      {"TEXCOORD", 18, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex, opacity),
        D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
 
   D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};

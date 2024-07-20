@@ -13,12 +13,16 @@ struct VS_INPUT
     float3 f_rest[16] : TEXCOORD0;
     float3 scale : TEXCOORD16;
     float4 rotation : TEXCOORD17;
+    float opacity : TEXCOORD18;
 };
 
 struct VS_OUTPUT
 {
     float4 pos : SV_POSITION;
     float4 color : COLOR;
+    float opacity : TEXCOORD18;
+    float3 conic : TEXCOORD19; 
+    float3 hfovxy_focal : TEXCOORD20;
 };
 
 static const float SH_C0 = 0.2820947918f;
@@ -145,6 +149,9 @@ VS_OUTPUT main(VS_INPUT input)
     float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
     pos_screen.xy = pos_screen.xy + input.pos.xy * quadwh_ndc;
     float2 coordxy = input.pos.xy * quadwh_scr;
+    
+    output.conic = conic;
+    output.hfovxy_focal = hfovxy_focal;
     
     
     return output;
