@@ -81,7 +81,7 @@ set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
 target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
 
 # Add files to build folder for executable
-file(GLOB LOAD_FILES "shader/*.hlsl" "assets/*.ply")
+file(GLOB LOAD_FILES "shader/*.hlsl" "assets/*.ply" "compute/*")
 foreach(_file IN ITEMS ${LOAD_FILES})
     get_filename_component(filename ${_file} NAME)
     get_filename_component(directory ${_file} DIRECTORY)
@@ -90,7 +90,7 @@ foreach(_file IN ITEMS ${LOAD_FILES})
 endforeach(_file)
 
 # Set CMAKE option
-#option(DEFAULT_PLY_FILE "Default PLY file path" "../assets/file.ply")
+#option(DEFAULT_PLY_FILE "Default PLY file path" "../assets/test_vase.ply")
 
 set(DEFAULT_PLY_FILE "../assets/test_vase.ply" CACHE STRING "Default PLY file path")
 
@@ -99,3 +99,4 @@ message(STATUS "Default PLY file: ${DEFAULT_PLY_FILE}")
 
 # Set the CMake option as target argument for the debugger
 set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "${DEFAULT_PLY_FILE}")
+

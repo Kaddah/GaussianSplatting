@@ -3,15 +3,23 @@
 
 #include <glm/glm.hpp>
 
-struct Vertex {
-    glm::vec3 pos; // Position double x, y, z;
-    glm::vec3 normal; // Normale double nx, ny, nz;
-    glm::vec4 color; // Farben (8-Bit RGB) unsigned char r, g, b;
-    float              opacity;        // Opazität
-    glm::vec3          scale;          // Skalierung
-    glm::vec4          rotation;       // Rotation
-    float f_rest[48]; // Platz für zusätzliche Eigenschaften
-    
+struct Vertex
+{
+  glm::vec3 pos;        // Position double x, y, z;
+  glm::vec3 normal;     // Normale double nx, ny, nz;
+  glm::vec4 color;      // Farben (8-Bit RGB) unsigned char r, g, b;
+  float     opacity;    // Opazitï¿½t
+  glm::vec3 scale;      // Skalierung
+  glm::vec4 rotation;   // Rotation
+  float     f_rest[48]; // Platz fï¿½r zusï¿½tzliche Eigenschaften
 };
+
+// struct for computeshader sorting position depth with reduced memory consumption
+struct VertexPos
+{
+    glm::vec3 position;
+    uint32_t          index;
+};
+
 
 #endif // VERTEX_H
