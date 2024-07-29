@@ -840,11 +840,18 @@ void Window::ExecuteComputeShader()
   // Set compute root signature
   computeCommandList->SetComputeRootSignature(computeRootSignature.Get());
 
-  // Set compute shader UAV
-  computeCommandList->SetComputeRootUnorderedAccessView(0, positionBuffer->GetGPUVirtualAddress());
+  // Set compute shader root parameters
+  // Assuming that the computeRootSignature's parameter [0] is a CBV, [1] is a SRV, and [2] is a UAV
+  computeCommandList->SetComputeRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());
+  computeCommandList->SetComputeRootShaderResourceView(1, positionBuffer->GetGPUVirtualAddress());
+  computeCommandList->SetComputeRootUnorderedAccessView(2, positionBuffer->GetGPUVirtualAddress());
 
-  // Dispatch compute shader
-  computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(positions.size()) / 256.0f)), 1, 1);
+  // Check the size of the positions and ensure we have a valid number of thread groups
+  if (positions.size() > 0)
+  {
+    // Dispatch compute shader
+    computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(positions.size()) / 256.0f)), 1, 1);
+  }
 
   // Transition the position buffer back to UAV state
   uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
