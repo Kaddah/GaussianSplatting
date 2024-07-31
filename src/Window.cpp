@@ -648,7 +648,7 @@ void Window::UpdateCameraPosition()
     cameraPos += cameraSpeed * cameraUp * deltaS; // Move down
   }
 
-  const glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
+  const glm::vec3 cameraRight =glm::normalize( glm::cross(cameraFront, cameraUp));
   if (GetAsyncKeyState('A') & 0x8000)
   {
     cameraPos -= cameraRight * cameraSpeed * deltaS; // Move left
@@ -662,8 +662,9 @@ void Window::UpdateCameraPosition()
 void Window::UpdateCameraDirection()
 {
 
-  if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
-  {
+ if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
+ {
+
     POINT currentMousePos;
     GetCursorPos(&currentMousePos);
 
@@ -681,20 +682,25 @@ void Window::UpdateCameraDirection()
     if (pitch < -89.0f)
       pitch = -89.0f;
 
-        if (yaw > 360.0f)
-      yaw -= 360.0f;
-    else if (yaw < 0.0f)
-      yaw += 360.0f;
+  //      if (yaw > 360.0f)
+  //    yaw -= 360.0f;
+  ////  else if (yaw < 0.0f)
+   //   yaw += 360.0f;
 
     glm::vec3 direction;
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-     cameraFront = glm::normalize(direction);
+    direction.y = 0.0f;
+    direction.z = sin(glm::radians(yaw))  * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
+
     glm::vec3 cameraRight;
-   cameraRight = glm::normalize(glm::cross(cameraFront, glm::vec3(0.0f,1.0f,0.0f))); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
+
+    cameraRight = glm::normalize( glm::cross(cameraFront,glm::vec3(0.0f, 1.0f, 0.0f) )); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
     cameraUp = glm::normalize(glm::cross(cameraRight, cameraFront));
 
+
+    std::cout << "cameraFront: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")\n";
+    std::cout << "cameraUp: (" << cameraUp.x << ", " << cameraUp.y << ", " << cameraUp.z << ")\n";
     // Update previous mouse position
     prevMousePosCameraDirection = currentMousePos;
   }
@@ -766,6 +772,8 @@ void Window::UpdatePipeline()
     std::wcout << L"orbiCam is true\n";
     OrbitalCamera();
     
+  
+    
   }
   // get aspectratio
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
@@ -773,6 +781,7 @@ void Window::UpdatePipeline()
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
   glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
+
 
   // Combine the rotations
   glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
