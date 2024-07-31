@@ -1,12 +1,13 @@
 cbuffer ConstantBuffer : register(b0)
 {
     float4x4 transformMat;
-    
     float4x4 rotationMat;
     float4x4 projectionMat;
     float4x4 viewMat;
     float3 hfovxy_focal;
 };
+
+StructuredBuffer<VertexPos> sortedIndices : register(t0); // SRV for sorted indices
 
 struct VS_INPUT
 {
@@ -23,7 +24,7 @@ struct VS_OUTPUT
     float4 pos : SV_POSITION;
     float4 color : COLOR;
     float opacity : TEXCOORD18;
-    float3 conic : TEXCOORD19; 
+    float3 conic : TEXCOORD19;
     float3 hfovxy_focal : TEXCOORD20;
 };
 
@@ -121,11 +122,15 @@ float3 computeCov2D(float4 mean_view, float focal_x, float focal_y, float tan_fo
     return float3(cov[0][0], cov[0][1], cov[1][1]);
 }
 
-
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.pos = mul(transformMat, input.pos);
+    
+    // Use sorted index to access the sorted vertex data
+    uint sortedIndex = sortedIndices[input.pos.xyz].index; // Assumes index is stored in sortedIndices
+    float4 vertexPos = mul(transformMat, input.pos);
+    
+    output.pos = mul(projectionMat, mul(viewMat, vertexPos));
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
     
     float4 pos_view = mul(viewMat, input.pos);
@@ -143,7 +148,6 @@ VS_OUTPUT main(VS_INPUT input)
 
     // Invert covariance (EWA algorithm)
     float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
-    
     float det_inv = 1.f / det;
     float3 conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
     
@@ -155,8 +159,5 @@ VS_OUTPUT main(VS_INPUT input)
     output.conic = conic;
     output.hfovxy_focal = hfovxy_focal;
     
-    
     return output;
-    
-   
 }
