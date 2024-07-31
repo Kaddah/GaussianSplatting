@@ -24,6 +24,10 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_UNICODE /DUNICODE")
+
+# Set the C++ standard
+set(CMAKE_CXX_STANDARD 20)
+
 # Add project_options from https://github.com/aminya/project_options
 # Change the version in the following URL to update the package (watch the releases of the repository for future updates)
 set(PROJECT_OPTIONS_VERSION "v0.35.1")
@@ -81,7 +85,7 @@ set_target_properties(${NAME_EXE} PROPERTIES WIN32_EXECUTABLE TRUE)
 target_include_directories(${NAME_EXE} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/header)
 
 # Add files to build folder for executable
-file(GLOB LOAD_FILES "shader/*.hlsl" "assets/*.ply")
+file(GLOB LOAD_FILES "shader/*.hlsl" "assets/*.ply" "compute/*")
 foreach(_file IN ITEMS ${LOAD_FILES})
     get_filename_component(filename ${_file} NAME)
     get_filename_component(directory ${_file} DIRECTORY)
@@ -99,3 +103,4 @@ message(STATUS "Default PLY file: ${DEFAULT_PLY_FILE}")
 
 # Set the CMake option as target argument for the debugger
 set_target_properties(${NAME_EXE} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "${DEFAULT_PLY_FILE}")
+

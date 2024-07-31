@@ -2,6 +2,10 @@ cbuffer ConstantBuffer : register(b0)
 {
     float4x4 transformMat;
     
+    float4x4 rotationMat;
+    float4x4 projectionMat;
+    float4x4 viewMat;
+    float3 hfovxy_focal;
 };
 
 struct VS_INPUT
@@ -9,12 +13,18 @@ struct VS_INPUT
     float4 pos : POSITION;
     float4 color : COLOR;
     float3 f_rest[16] : TEXCOORD0;
+    float3 scale : TEXCOORD16;
+    float4 rotation : TEXCOORD17;
+    float opacity : TEXCOORD18;
 };
 
 struct VS_OUTPUT
 {
     float4 pos : SV_POSITION;
     float4 color : COLOR;
+    float opacity : TEXCOORD18;
+    float3 conic : TEXCOORD19; 
+    float3 hfovxy_focal : TEXCOORD20;
 };
 
 static const float SH_C0 = 0.2820947918f;
@@ -62,11 +72,90 @@ float3 computeColorFromSH(float3 position, float3 f_rest[16])
     return result;
 }
 
+float3x3 computeCov3D(float3 scale, float4 q)
+{
+    float3x3 S = float3x3(
+        scale.x, 0.0f, 0.0f,
+        0.0f, scale.y, 0.0f,
+        0.0f, 0.0f, scale.z
+    );
+
+    float r = q.x;
+    float x = q.y;
+    float y = q.z;
+    float z = q.w;
+
+    float3x3 R = float3x3(
+        1.0f - 2.0f * (y * y + z * z), 2.0f * (x * y - r * z), 2.0f * (x * z + r * y),
+        2.0f * (x * y + r * z), 1.0f - 2.0f * (x * x + z * z), 2.0f * (y * z - r * x),
+        2.0f * (x * z - r * y), 2.0f * (y * z + r * x), 1.0f - 2.0f * (x * x + y * y)
+    );
+
+    float3x3 M = mul(S, R);
+    float3x3 Sigma = mul(transpose(M), M);
+    return Sigma;
+}
+
+float3 computeCov2D(float4 mean_view, float focal_x, float focal_y, float tan_fovx, float tan_fovy, float3x3 cov3D, float4x4 viewmatrix)
+{
+    float4 t = mean_view;
+    // why need this? Try remove this later
+    float limx = 1.3f * tan_fovx;
+    float limy = 1.3f * tan_fovy;
+    float txtz = t.x / t.z;
+    float tytz = t.y / t.z;
+    t.x = min(limx, max(-limx, txtz)) * t.z;
+    t.y = min(limy, max(-limy, tytz)) * t.z;
+
+    float3x3 J = float3x3(
+        focal_x / t.z, 0.0f, -(focal_x * t.x) / (t.z * t.z),
+        0.0f, focal_y / t.z, -(focal_y * t.y) / (t.z * t.z),
+        0.0f, 0.0f, 0.0f
+    );
+    float3x3 W = transpose((float3x3) viewmatrix);
+    float3x3 T = mul(W, J);
+
+    float3x3 cov = mul(transpose(T), mul(transpose(cov3D), T));
+    cov[0][0] += 0.3f;
+    cov[1][1] += 0.3f;
+    return float3(cov[0][0], cov[0][1], cov[1][1]);
+}
+
+
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     output.pos = mul(transformMat, input.pos);
     output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
+    
+    float4 pos_view = mul(viewMat, input.pos);
+    float4 pos_screen = mul(projectionMat, pos_view);
+    
+    float3x3 cov3d = computeCov3D(input.scale, input.rotation);
+    float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
+    float3 cov2d = computeCov2D(pos_view,
+                              hfovxy_focal.z,
+                              hfovxy_focal.z,
+                              hfovxy_focal.x,
+                              hfovxy_focal.y,
+                              cov3d,
+                              viewMat);
+
+    // Invert covariance (EWA algorithm)
+    float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
+    
+    float det_inv = 1.f / det;
+    float3 conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
+    
+    float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z)); // screen space half quad height and width
+    float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
+    pos_screen.xy = pos_screen.xy + input.pos.xy * quadwh_ndc;
+    float2 coordxy = input.pos.xy * quadwh_scr;
+    
+    output.conic = conic;
+    output.hfovxy_focal = hfovxy_focal;
+    
+    
     return output;
     
    

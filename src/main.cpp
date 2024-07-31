@@ -7,10 +7,13 @@
 #include "GaussianRenderer.h"
 #include "Vertex.h"
 #include <PlyReader.h>
+#include <filesystem>
 #include <iostream>
 
+namespace fs = std::filesystem;
+
 std::vector<Vertex> vertices;
-std::vector<Vertex> quads;
+//std::vector<Vertex> quads;
 // GaussianRenderer window;
 
 void attachConsole()
@@ -65,12 +68,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   }
 
   // #10 start to import PLY file - MH
-  // std::string plyFilename = "../triangle-data-test.ply";
-  // std::string plyFilename = "../bycicle-test.ply";
-  // std::string plyFilename = "../assets/file.ply";
-
   // default if exe get no argument
-  std::string plyFilename = "../assets/file.ply";
+  std::string plyFilename = "../assets/vase_test.ply";
   if (strlen(lpCmdLine) > 0)
   {
     // set path to given argument (if run in Visual Studio the argument is set by CMake File to "../assets/file.ply")
@@ -81,8 +80,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
   try
   {
-    GaussianRenderer window(L"Triangle", 800, 600, false, hInstance, nShowCmd, vertices, quads);
+    GaussianRenderer window(L"Gaussian Splatting", 800, 600, false, hInstance, nShowCmd, vertices);
     // start the main loop
+
     window.mainloop();
   }
   catch (const DxException& e)
@@ -96,6 +96,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Generic error message for other exceptions
     MessageBoxA(NULL, e.what(), "Exception Caught", MB_ICONERROR);
     return -1;
+  }
+
+  std::string assetsFolderPath = "../assets";
+
+  try
+  {
+    for (const auto& entry : fs::directory_iterator(assetsFolderPath))
+    {
+      if (entry.is_regular_file() && entry.path().extension() == ".ply")
+      {
+        std::cout << entry.path() << std::endl;
+      }
+    }
+  }
+  catch (const fs::filesystem_error& e)
+  {
+    std::cerr << "Error accessing directory: " << e.what() << std::endl;
   }
 
   return 0;
