@@ -29,12 +29,12 @@ using Microsoft::WRL::ComPtr;
 
 
 
-HfovxyFocal calculateHfovxyFocal(float fovy, float _height, float _width)
+HfovxyFocal calculateHfovxyFocal(float fovy, float height_, float width_)
 {
   HfovxyFocal result;
   result.htany = tan(fovy / 2.0f);
-  result.htanx = result.htany / _height * _width;
-  result.focal = _height / (2.0f * result.htany);
+  result.htanx = result.htany / height_ * width_;
+  result.focal = height_ / (2.0f * result.htany);
   return result;
 }
 
@@ -50,11 +50,11 @@ ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 size_t vBufferSize;
 
 Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd)
-    : _width(width)
-    , _height(height)
-    , _hwnd(NULL)
-    , _running(true)
-    , _fullScreen(fullScreen) // initializer list
+    : width_(width)
+    , height_(height)
+    , hwnd_(NULL)
+    , running_(true)
+    , fullScreen_(fullScreen) // initializer list
 
 {
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
@@ -65,7 +65,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
-  ShowWindow(_hwnd, SW_SHOW);
+  ShowWindow(hwnd_, SW_SHOW);
 }
 
 bool Window::InitD3D()
@@ -134,8 +134,8 @@ bool Window::InitD3D()
 
   // Create the Swap Chain
   DXGI_MODE_DESC backBufferDesc = {};
-  backBufferDesc.Width          = _width;
-  backBufferDesc.Height         = _height;
+  backBufferDesc.Width          = width_;
+  backBufferDesc.Height         = height_;
   backBufferDesc.Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
 
   DXGI_SAMPLE_DESC sampleDesc = {};
@@ -146,9 +146,9 @@ bool Window::InitD3D()
   swapChainDesc.BufferDesc           = backBufferDesc;
   swapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   swapChainDesc.SwapEffect           = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-  swapChainDesc.OutputWindow         = _hwnd;
+  swapChainDesc.OutputWindow         = hwnd_;
   swapChainDesc.SampleDesc           = sampleDesc;
-  swapChainDesc.Windowed             = !_fullScreen;
+  swapChainDesc.Windowed             = !fullScreen_;
 
   ComPtr<IDXGISwapChain> tempSwapChain;
   ThrowIfFailed(dxgiFactory->CreateSwapChain(commandQueue.Get(), &swapChainDesc, &tempSwapChain));
@@ -352,7 +352,7 @@ bool Window::InitD3D()
   hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
   if (FAILED(hr))
   {
-    _running = false;
+    running_ = false;
   }
 
   // Create root signature for compute shader
@@ -407,7 +407,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
+    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, hwnd_);
   }
   else
   {
@@ -416,22 +416,22 @@ bool Window::InitD3D()
 
   viewport.TopLeftX = 0;
   viewport.TopLeftY = 0;
-  viewport.Width    = _width;
-  viewport.Height   = _height;
+  viewport.Width    = width_;
+  viewport.Height   = height_;
   viewport.MinDepth = 0.0f;
   viewport.MaxDepth = 1.0f;
 
   scissorRect.left   = 0;
   scissorRect.top    = 0;
-  scissorRect.right  = _width;
-  scissorRect.bottom = _height;
+  scissorRect.right  = width_;
+  scissorRect.bottom = height_;
 
   return true;
 }
 
 void Window::Stop()
 {
-  _running = false;
+  running_ = false;
 }
 
 Window::~Window()
@@ -455,13 +455,13 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 
 void Window::ResizeWindow(int width, int height)
 {
-  _width  = width;
-  _height = height;
+  width_  = width;
+  height_ = height;
 
-  viewport.Width     = _width;
-  viewport.Height    = _height;
-  scissorRect.right  = _width;
-  scissorRect.bottom = _height;
+  viewport.Width     = width_;
+  viewport.Height    = height_;
+  scissorRect.right  = width_;
+  scissorRect.bottom = height_;
 
   for (int i = 0; i < frameBufferCount; ++i)
   {
@@ -548,8 +548,8 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     MONITORINFO mi   = {sizeof(mi)};
     GetMonitorInfo(hmon, &mi);
 
-    _width  = mi.rcMonitor.right - mi.rcMonitor.left;
-    _height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    width_  = mi.rcMonitor.right - mi.rcMonitor.left;
+    height_ = mi.rcMonitor.bottom - mi.rcMonitor.top;
   }
 
   WNDCLASSEX wc;
@@ -573,12 +573,12 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     return false;
   }
 
-  _hwnd =
+  hwnd_ =
       CreateWindowEx(NULL, windowName,
                      windowName, // windowTitle
-                     WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, _width, _height, NULL, NULL, hInstance, this);
+                     WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width_, height_, NULL, NULL, hInstance, this);
 
-  if (!_hwnd)
+  if (!hwnd_)
   {
     MessageBox(NULL, L"Error creating window", L"Error", MB_OK | MB_ICONERROR);
     return false;
@@ -586,7 +586,7 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
 
   if (fullscreen)
   {
-    SetWindowLong(_hwnd, GWL_STYLE, 0);
+    SetWindowLong(hwnd_, GWL_STYLE, 0);
   }
 
   return true;
@@ -605,14 +605,14 @@ void Window::Render()
 
   if (FAILED(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex])))
   {
-    _running = false;
+    running_ = false;
   }
 
   // present the current backbuffer
   hr = swapChain->Present(0, 0);
   if (FAILED(hr))
   {
-    _running = false;
+    running_ = false;
   }
 }
 
@@ -630,13 +630,13 @@ void Window::mainloop()
 
    //InitializeComputeBuffer(vertIndex);
 
-  while (_running)
+  while (running_)
   {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
     {
       if (msg.message == WM_QUIT)
       {
-        _running = false;
+        running_ = false;
         break;
       }
 
@@ -644,7 +644,7 @@ void Window::mainloop()
       DispatchMessage(&msg);
     }
 
-    if (!_running)
+    if (!running_)
     {
       break;
     }
@@ -848,7 +848,7 @@ void Window::UpdatePipeline()
     
   }
   // get aspectratio
-  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
+  float aspectRatio = static_cast<float>(width_) / static_cast<float>(height_);
   // Create individual rotation matrices for each axis
   glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
   glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -878,7 +878,7 @@ void Window::UpdatePipeline()
   }
 
   float fovy = M_PI / 2;
-  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);
+  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, height_, width_);
 
   // Update the constant buffer with mvp
   UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix, hfovxy_focal, transformMat);
@@ -976,7 +976,7 @@ void Window::WaitForPreviousFrame()
     hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
     if (FAILED(hr))
     {
-      _running = false;
+      running_ = false;
     }
 
     // wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
