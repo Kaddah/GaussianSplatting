@@ -948,8 +948,8 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
     // Create upload heap for vertex buffer
-    auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    ID3D12Resource* vBufferUploadHeap;
+    auto                   heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    ComPtr<ID3D12Resource> vBufferUploadHeap;
     ThrowIfFailed(device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
                                                   D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                   IID_PPV_ARGS(&vBufferUploadHeap)));
@@ -962,11 +962,11 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     vertexData.SlicePitch             = vBufferSize;
 
     // Schedule copy from upload heap to default heap
-    UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
+    UpdateSubresources<1>(commandList.Get(), vertexBuffer.Get(), vBufferUploadHeap.Get(), 0, 0, 1, &vertexData);
 
     // Transition vertex buffer to vertex buffer state
-    auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST,
-                                                                       D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(
+        vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     commandList->ResourceBarrier(1, &resBarrierVertexBuffer);
 
     // Execute the command list to upload vertex data
