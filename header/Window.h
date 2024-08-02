@@ -55,6 +55,8 @@ public:
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
   void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
+  bool InitializeIndexBuffer(const std::vector<uint32_t>& indices);
+  
 
   void ResizeWindow(int width, int height);
 
@@ -63,6 +65,8 @@ public:
   CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+  ComPtr<ID3D12Resource>   indexBuffer;
+  D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
   void UpdateCameraPosition();
   void UpdateCameraDirection();
@@ -78,7 +82,7 @@ public:
   //CameraMode cameraMode = CameraMode::Normal;
 
   bool orbiCam = false;
-  
+
 
   POINT prevMousePosCameraDirection = {0, 0};
   POINT prevMousePosRotation        = {0, 0};

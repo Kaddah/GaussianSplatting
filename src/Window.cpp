@@ -44,7 +44,7 @@ std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
 ComPtr<ID3D12Resource>       positionBuffer;
-std::vector<VertexPos>       indices;
+extern std::vector<VertexPos>       indices;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
 size_t vBufferSize;
@@ -401,6 +401,18 @@ bool Window::InitD3D()
   ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, computeCommandAllocator.Get(),
                                           computePipelineState.Get(), IID_PPV_ARGS(&computeCommandList)));
   computeCommandList->Close();
+
+
+  // Create and initialize the Index Buffer based on vertices count
+  std::vector<uint32_t> indices(vertices.size());
+
+  for (size_t i = 0; i < indices.size(); ++i)
+  {
+    indices[i] = static_cast<uint32_t>(i);
+  }
+
+  // Initialize Index Buffer
+  InitializeIndexBuffer(indices);
 
   // Initialize positions for compute shader
   InitializeComputeBuffer(vertices);
@@ -829,8 +841,6 @@ void Window::UpdatePipeline()
   // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list
   // was stored in
   ThrowIfFailed(commandAllocator[frameIndex]->Reset());
-
-  // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
     if (orbiCam == false)
@@ -885,6 +895,7 @@ void Window::UpdatePipeline()
 
   // Call this onc  to set the initial mouse position
   InitializeMousePosition();
+
 
   // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
   //  transition the "frameIndex" render target from the present state to the render target state so the command list
@@ -1156,3 +1167,69 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
   CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());
   device->CreateUnorderedAccessView(positionBuffer.Get(), nullptr, &uavDesc, uavHandle);
 }
+
+bool Window::InitializeIndexBuffer(const std::vector<uint32_t>& indices)
+{
+  try
+  {
+    if (indices.empty())
+    {
+      throw std::runtime_error("Index data is empty.");
+    }
+
+    size_t bufferSize = indices.size() * sizeof(uint32_t);
+
+    // Create default heap for the index buffer
+    CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+    ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&indexBuffer)));
+
+    indexBuffer->SetName(L"Index Buffer Resource Heap");
+
+    // Create the upload heap
+    CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+    ComPtr<ID3D12Resource>  indexBufferUploadHeap;
+    ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&indexBufferUploadHeap)));
+
+    // Copy the index data to the upload heap
+    D3D12_SUBRESOURCE_DATA indexData = {};
+    indexData.pData                  = reinterpret_cast<const BYTE*>(indices.data());
+    indexData.RowPitch               = bufferSize;
+    indexData.SlicePitch             = bufferSize;
+
+    UpdateSubresources<1>(commandList.Get(), indexBuffer.Get(), indexBufferUploadHeap.Get(), 0, 0, 1, &indexData);
+
+    // Transition the index buffer to the correct state
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+    commandList->ResourceBarrier(1, &barrier);
+
+    // Execute the command list to apply the resource barrier
+    commandList->Close();
+    ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
+    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // Increment fence value to ensure proper synchronization
+    fenceValue[frameIndex]++;
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
+
+    // Initialize the index buffer view
+    indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+    indexBufferView.Format         = DXGI_FORMAT_R32_UINT;
+    indexBufferView.SizeInBytes    = static_cast<UINT>(bufferSize);
+
+   
+
+    return true;
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Error initializing index buffer: " << e.what() << std::endl;
+    return false;
+  }
+}
+

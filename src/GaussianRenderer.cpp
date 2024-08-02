@@ -30,10 +30,25 @@ void GaussianRenderer::draw()
   commandList->SetGraphicsRootSignature(rootSignature);
   commandList->RSSetViewports(1, &viewport);
   commandList->RSSetScissorRects(1, &scissorRect);
-  commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+   // Bind the vertex buffer and index buffer to the pipeline
   commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+  commandList->IASetIndexBuffer(&indexBufferView);
+  // Set the primitive topology to point list
+  commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+
   commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());
-  commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0); // draw 3 vertices (draw the triangle)
+  //commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0); // draw 3 vertices (draw the triangle)
+
+  UINT indexCount = 10;
+  // Draw the points using the index buffer
+  commandList->DrawIndexedInstanced
+      (indexCount, // Number of indices to draw
+      1,                                                                 // Number of instances to draw
+      0,                                                                 // Start index location
+      0,                                                                 // Base vertex location
+      0                                                                  // Start instance location
+  );
 }
 
 void GaussianRenderer::drawUI()
