@@ -12,7 +12,7 @@ GaussianRenderer::GaussianRenderer(LPCTSTR WindowName, int width, int height, bo
                                    int nShowCmd, const std::vector<Vertex>& vertices)
     : Window(WindowName, width, height, fullScreen, hInstance, nShowCmd)
     , m_vertices(vertices)
-    , m_quads(vertices)
+    /*, m_quads(vertices)*/
 {
 }
 
@@ -34,16 +34,17 @@ void GaussianRenderer::draw()
    // Bind the vertex buffer and index buffer to the pipeline
   commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
   commandList->IASetIndexBuffer(&indexBufferView);
+
   // Set the primitive topology to point list
   commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 
   commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());
   //commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0); // draw 3 vertices (draw the triangle)
 
-  UINT indexCount = 10;
+  //UINT indexCount = 10;
   // Draw the points using the index buffer
-  commandList->DrawIndexedInstanced
-      (indexCount, // Number of indices to draw
+  commandList->DrawIndexedInstanced(
+      indexBufferView.SizeInBytes / sizeof(uint32_t), // Number of indices to draw
       1,                                                                 // Number of instances to draw
       0,                                                                 // Start index location
       0,                                                                 // Base vertex location
@@ -110,12 +111,12 @@ const std::vector<Vertex>& GaussianRenderer::getVertices() const
 }
 
 // Setter method implementation
-void GaussianRenderer::setQuadVertices(const std::vector<Vertex>& vertices)
-{
-  m_quadVertices = vertices;
-}
-// Implementation of the getter method
-const std::vector<Vertex>& GaussianRenderer::getQuadVertices()
-{
-  return m_quads;
-}
+//void GaussianRenderer::setQuadVertices(const std::vector<Vertex>& vertices)
+//{
+//  m_quadVertices = vertices;
+//}
+//// Implementation of the getter method
+//const std::vector<Vertex>& GaussianRenderer::getQuadVertices()
+//{
+//  return m_quads;
+//}

@@ -312,5 +312,6 @@ std::vector<Vertex> PlyReader::readPlyFile(const std::string& filename)
   std::chrono::duration<double> duration = endTime - start;
   std::cout << "Time taken to read PLY file: " << duration.count() << " seconds" << std::endl;
 
+
   return vertices;
 }

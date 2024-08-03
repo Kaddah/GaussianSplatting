@@ -39,12 +39,12 @@ HfovxyFocal calculateHfovxyFocal(float fovy, float _height, float _width)
 }
 
 extern std::vector<Vertex> vertices;
+std::vector<VertexPos>       indices;
 
 std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
 ComPtr<ID3D12Resource>       positionBuffer;
-extern std::vector<VertexPos>       indices;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
 size_t vBufferSize;
@@ -403,17 +403,6 @@ bool Window::InitD3D()
   computeCommandList->Close();
 
 
-  // Create and initialize the Index Buffer based on vertices count
-  std::vector<uint32_t> indices(vertices.size());
-
-  for (size_t i = 0; i < indices.size(); ++i)
-  {
-    indices[i] = static_cast<uint32_t>(i);
-  }
-
-  // Initialize Index Buffer
-  InitializeIndexBuffer(indices);
-
   // Initialize positions for compute shader
   InitializeComputeBuffer(vertices);
 
@@ -633,8 +622,18 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-
   InitializeVertexBuffer(vertices);
+
+  // Create and initialize the Index Buffer based on vertices count
+  std::vector<uint32_t> indices(vertices.size());
+
+  for (size_t i = 0; i < indices.size(); ++i)
+  {
+    indices[i] = static_cast<uint32_t>(i);
+  }
+
+  //// Initialize Index Buffer
+  InitializeIndexBuffer(indices);
 
   UpdateVertexBuffer(vertices);
 
