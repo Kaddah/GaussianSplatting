@@ -663,22 +663,12 @@ void Window::UpdatePipeline()
 
   glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
 
-  glm::mat4 viewMatrix        = camera->getViewMatrix();
-  glm::mat4 orbitalViewMatrix = camera->getOrbitalViewMatrix();
+  glm::mat4 viewMatrix = camera->updateViewMatrix();
   glm::mat4 projectionMatrix =
       glm::perspective(glm::radians(camera->getFov()), aspectRatio, camera->getNearPlane(), camera->getFarPlane());
   glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
-  glm::mat4 transformMat;
-
-  if (!camera->getOrbiCam())
-  {
-    transformMat = mvpMat;
-  }
-  else
-  {
-    transformMat = projectionMatrix * orbitalViewMatrix;
-  }
+  glm::mat4 transformMat = mvpMat;
 
   float       fovy         = M_PI / 2;
   HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);

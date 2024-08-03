@@ -39,6 +39,7 @@ public:
   {
     return glm::lookAt(cameraPos, cameraTarget, cameraUp);
   }
+  glm::mat4 updateViewMatrix();
 
   void setWindowDimensions(int width, int height)
   {
