@@ -1,3 +1,4 @@
+#include "Window.h"
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <chrono>
@@ -10,31 +11,23 @@
 #include <math.h>
 
 #include "ImguiAdapter.h"
-#include "Window.h"
 #include "d3dx12.h"
 #include <DxException.h>
 #include <GaussianRenderer.h>
-#include <Shader.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <math_extensions.h>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
-
 #include <PlyReader.h>
-#include <memory>
+#include <Shader.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-
-
-HfovxyFocal calculateHfovxyFocal(float fovy, float height_, float width_)
+HfovxyFocal calculateHfovxyFocal(float fovy, float _height, float _width)
 {
   HfovxyFocal result;
   result.htany = tan(fovy / 2.0f);
-  result.htanx = result.htany / height_ * width_;
-  result.focal = height_ / (2.0f * result.htany);
+  result.htanx = result.htany / _height * _width;
+  result.focal = _height / (2.0f * result.htany);
   return result;
 }
 
@@ -50,13 +43,15 @@ ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 size_t vBufferSize;
 
 Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd)
-    : width_(width)
-    , height_(height)
-    , hwnd_(NULL)
-    , running_(true)
-    , fullScreen_(fullScreen) // initializer list
-
+    : _width(width)
+    , _height(height)
+    , _hwnd(NULL)
+    , _running(true)
+    , _fullScreen(fullScreen)
+    , camera(std::make_unique<Camera>()) // initializer list
 {
+  camera->setWindowDimensions(width, height);
+
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
     throw std::runtime_error("Failed to initialize window");
@@ -65,7 +60,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
   {
     MessageBox(0, L"Failed to initialize direct3d 12", L"Error", MB_OK);
   }
-  ShowWindow(hwnd_, SW_SHOW);
+  ShowWindow(_hwnd, SW_SHOW);
 }
 
 bool Window::InitD3D()
@@ -134,8 +129,8 @@ bool Window::InitD3D()
 
   // Create the Swap Chain
   DXGI_MODE_DESC backBufferDesc = {};
-  backBufferDesc.Width          = width_;
-  backBufferDesc.Height         = height_;
+  backBufferDesc.Width          = _width;
+  backBufferDesc.Height         = _height;
   backBufferDesc.Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
 
   DXGI_SAMPLE_DESC sampleDesc = {};
@@ -146,9 +141,9 @@ bool Window::InitD3D()
   swapChainDesc.BufferDesc           = backBufferDesc;
   swapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   swapChainDesc.SwapEffect           = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-  swapChainDesc.OutputWindow         = hwnd_;
+  swapChainDesc.OutputWindow         = _hwnd;
   swapChainDesc.SampleDesc           = sampleDesc;
-  swapChainDesc.Windowed             = !fullScreen_;
+  swapChainDesc.Windowed             = !_fullScreen;
 
   ComPtr<IDXGISwapChain> tempSwapChain;
   ThrowIfFailed(dxgiFactory->CreateSwapChain(commandQueue.Get(), &swapChainDesc, &tempSwapChain));
@@ -256,7 +251,7 @@ bool Window::InitD3D()
   computeShaderBytecode.BytecodeLength        = computeShader->GetBufferSize();
   computeShaderBytecode.pShaderBytecode       = computeShader->GetBufferPointer();
 
- D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+  D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        0},
       {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal),
@@ -317,8 +312,7 @@ bool Window::InitD3D()
   psoDesc.SampleDesc                         = sampleDesc;
   psoDesc.SampleMask                         = 0xffffffff;
   psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  // psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-  psoDesc.NumRenderTargets = 1;
+  psoDesc.NumRenderTargets                   = 1;
 
   // Blend State konfigurieren
   D3D12_RENDER_TARGET_BLEND_DESC rtvBlendDesc = {};
@@ -352,12 +346,11 @@ bool Window::InitD3D()
   hr = commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]);
   if (FAILED(hr))
   {
-    running_ = false;
+    _running = false;
   }
 
   // Create root signature for compute shader
   CD3DX12_ROOT_PARAMETER computeRootParams[3];
-  // computeRootParams[0].InitAsUnorderedAccessView(0);
   computeRootParams[0].InitAsConstantBufferView(0);  // cbuffer Constants : register(b0)
   computeRootParams[1].InitAsShaderResourceView(0);  // StructuredBuffer inputPositions : register(t0)
   computeRootParams[2].InitAsUnorderedAccessView(0); // RWStructuredBuffer outputPositions : register(u0)
@@ -407,7 +400,7 @@ bool Window::InitD3D()
 
   if (SUCCEEDED(hr))
   {
-    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, hwnd_);
+    imguiAdapter = std::make_unique<ImGuiAdapter>(device, frameBufferCount, _hwnd);
   }
   else
   {
@@ -416,30 +409,28 @@ bool Window::InitD3D()
 
   viewport.TopLeftX = 0;
   viewport.TopLeftY = 0;
-  viewport.Width    = width_;
-  viewport.Height   = height_;
+  viewport.Width    = _width;
+  viewport.Height   = _height;
   viewport.MinDepth = 0.0f;
   viewport.MaxDepth = 1.0f;
 
   scissorRect.left   = 0;
   scissorRect.top    = 0;
-  scissorRect.right  = width_;
-  scissorRect.bottom = height_;
+  scissorRect.right  = _width;
+  scissorRect.bottom = _height;
 
   return true;
 }
 
 void Window::Stop()
 {
-  running_ = false;
+  _running = false;
 }
 
 Window::~Window()
 {
   // Cleanup
-  //  wait for the gpu to finish all frames
   WaitForPreviousFrame();
-  // get swapchain out of full screen before exiting
   BOOL fs = false;
   if (swapChain->GetFullscreenState(&fs, NULL))
     swapChain->SetFullscreenState(false, NULL);
@@ -455,13 +446,13 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
 
 void Window::ResizeWindow(int width, int height)
 {
-  width_  = width;
-  height_ = height;
+  _width  = width;
+  _height = height;
 
-  viewport.Width     = width_;
-  viewport.Height    = height_;
-  scissorRect.right  = width_;
-  scissorRect.bottom = height_;
+  viewport.Width     = _width;
+  viewport.Height    = _height;
+  scissorRect.right  = _width;
+  scissorRect.bottom = _height;
 
   for (int i = 0; i < frameBufferCount; ++i)
   {
@@ -489,6 +480,8 @@ void Window::ResizeWindow(int width, int height)
     device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle);
     rtvHandle.Offset(1, device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
   }
+
+  camera->setWindowDimensions(width, height);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -500,14 +493,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
   Window* window = nullptr;
   if (msg == WM_NCCREATE)
   {
-    // Set the pointer to window instance
     CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
     window                = reinterpret_cast<Window*>(pCreate->lpCreateParams);
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
   }
   else
   {
-    // Retrieve the pointer to window instance
     window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
   }
 
@@ -532,7 +523,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       break;
 
-    case WM_DESTROY: // x button on top right corner of window was pressed
+    case WM_DESTROY:
       window->Stop();
       PostQuitMessage(0);
       return 0;
@@ -548,8 +539,8 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     MONITORINFO mi   = {sizeof(mi)};
     GetMonitorInfo(hmon, &mi);
 
-    width_  = mi.rcMonitor.right - mi.rcMonitor.left;
-    height_ = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    _width  = mi.rcMonitor.right - mi.rcMonitor.left;
+    _height = mi.rcMonitor.bottom - mi.rcMonitor.top;
   }
 
   WNDCLASSEX wc;
@@ -573,12 +564,10 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
     return false;
   }
 
-  hwnd_ =
-      CreateWindowEx(NULL, windowName,
-                     windowName, // windowTitle
-                     WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width_, height_, NULL, NULL, hInstance, this);
+  _hwnd = CreateWindowEx(NULL, windowName, windowName, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, _width,
+                         _height, NULL, NULL, hInstance, this);
 
-  if (!hwnd_)
+  if (!_hwnd)
   {
     MessageBox(NULL, L"Error creating window", L"Error", MB_OK | MB_ICONERROR);
     return false;
@@ -586,7 +575,7 @@ bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen,
 
   if (fullscreen)
   {
-    SetWindowLong(hwnd_, GWL_STYLE, 0);
+    SetWindowLong(_hwnd, GWL_STYLE, 0);
   }
 
   return true;
@@ -596,23 +585,20 @@ void Window::Render()
 {
   HRESULT hr;
 
-  UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
-  // create an array of command lists (only one command list here)
+  UpdatePipeline();
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
-  // execute the array of command lists
   commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
   if (FAILED(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex])))
   {
-    running_ = false;
+    _running = false;
   }
 
-  // present the current backbuffer
   hr = swapChain->Present(0, 0);
   if (FAILED(hr))
   {
-    running_ = false;
+    _running = false;
   }
 }
 
@@ -621,22 +607,18 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-
   InitializeVertexBuffer(vertices);
-
   UpdateVertexBuffer(vertices);
 
   vertIndex = prepareIndices(vertices);
 
-   //InitializeComputeBuffer(vertIndex);
-
-  while (running_)
+  while (_running)
   {
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
     {
       if (msg.message == WM_QUIT)
       {
-        running_ = false;
+        _running = false;
         break;
       }
 
@@ -644,312 +626,131 @@ void Window::mainloop()
       DispatchMessage(&msg);
     }
 
-    if (!running_)
+    if (!_running)
     {
       break;
     }
 
-    Render(); // execute the command queue
+    Render();
   }
 }
-
-// rotation variables and mouse sensitivity
-void Window::UpdateRotationFromMouse()
-{
-  // Check if mouse is hovering over ImGui window
-  if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered() || ImGui::IsAnyItemActive())
-  {
-    return;
-  }
-  if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) // Check if left mouse button is held down
-  {
-    POINT currentMousePos;
-
-    GetCursorPos(&currentMousePos);
-
-    // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePosRotation.x;
-    int deltaY = currentMousePos.y - prevMousePosRotation.y;
-
-    // Update rotation angles based on mouse movement
-    alphaY += deltaX * mouseSensX; // Rotate around Y-axis with horizontal mouse movement
-    alphaX += deltaY * mouseSensY; // Rotate around X-axis with vertical mouse movement
-    // clamp angles
-
-    // Update previous mouse position
-    prevMousePosRotation = currentMousePos;
-  }
-  else
-  {
-    // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePosRotation);
-  }
-}
-
-// Call function to initialize previous mouse pos
-void Window::InitializeMousePosition()
-{
-  {
-    POINT initialMousePos;
-    GetCursorPos(&initialMousePos);
-    prevMousePosRotation        = initialMousePos;
-    prevMousePosCameraDirection = initialMousePos;
-  }
-}
-
-void Window::UpdateCameraPosition()
-{
-  // TODO move this variable into Window class as member
-  auto  now    = std::chrono::high_resolution_clock::now();
-  float deltaS = std::chrono::duration_cast<std::chrono::nanoseconds>(now - before).count() / 1e9f;
-  before       = now;
-  if (GetAsyncKeyState('W') & 0x8000)
-  {
-    cameraPos += cameraSpeed * cameraFront * deltaS;
-  }
-  if (GetAsyncKeyState('S') & 0x8000)
-  {
-    cameraPos -= cameraSpeed * cameraFront * deltaS; // Move down
-  }
-  if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) //
-  {
-    cameraPos -= cameraSpeed * cameraUp * deltaS; // Move down
-  }
-  if (GetAsyncKeyState(VK_SPACE) & 0x8000) //
-  {
-    cameraPos += cameraSpeed * cameraUp * deltaS; // Move down
-  }
-
-  const glm::vec3 cameraRight =glm::normalize( glm::cross(cameraFront, cameraUp));
-  if (GetAsyncKeyState('A') & 0x8000)
-  {
-    cameraPos -= cameraRight * cameraSpeed * deltaS; // Move left
-  }
-  if (GetAsyncKeyState('D') & 0x8000)
-  {
-    cameraPos += cameraRight * cameraSpeed * deltaS; // Move right
-  }
-}
-
-void Window::UpdateCameraDirection()
-{
-
- if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) // Check if right mouse button is held down
- {
-
-    POINT currentMousePos;
-    GetCursorPos(&currentMousePos);
-
-    // Calculate the mouse movement delta
-    int deltaX = currentMousePos.x - prevMousePosCameraDirection.x;
-    int deltaY = currentMousePos.y - prevMousePosCameraDirection.y;
-
-    // Update camera front vector based on mouse movement
-    float sensitivity = 0.05f;
-    yaw += deltaX * sensitivity;
-    pitch -= deltaY * sensitivity;
-
-    if (pitch > 89.0f)
-      pitch = 89.0f;
-    if (pitch < -89.0f)
-      pitch = -89.0f;
-
-  //      if (yaw > 360.0f)
-  //    yaw -= 360.0f;
-  ////  else if (yaw < 0.0f)
-   //   yaw += 360.0f;
-
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = 0.0f;
-    direction.z = sin(glm::radians(yaw))  * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(direction);
-
-    glm::vec3 cameraRight;
-
-    cameraRight = glm::normalize( glm::cross(cameraFront,glm::vec3(0.0f, 1.0f, 0.0f) )); // assuming worldUp is glm::vec3(0.0f, 1.0f, 0.0f)
-    cameraUp = glm::normalize(glm::cross(cameraRight, cameraFront));
-
-
-    std::cout << "cameraFront: (" << cameraFront.x << ", " << cameraFront.y << ", " << cameraFront.z << ")\n";
-    std::cout << "cameraUp: (" << cameraUp.x << ", " << cameraUp.y << ", " << cameraUp.z << ")\n";
-    // Update previous mouse position
-    prevMousePosCameraDirection = currentMousePos;
-  }
-  else
-  {
-    // Update previous mouse position when button is not pressed to avoid sudden jumps
-    GetCursorPos(&prevMousePosCameraDirection);
-  }
-}
-void Window::OrbitalCamera()
-{
-  if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
-  {
-
-    POINT currentMousePos;
-    GetCursorPos(&currentMousePos);
-
-    int deltaX = currentMousePos.x - prevMousePosCameraFocus.x;
-    int deltaY = currentMousePos.y - prevMousePosCameraFocus.y;
-
-    theta += deltaX * mouseSensX;
-    phi -= deltaY * mouseSensY;
-
-    if (phi > glm::radians(89.0f))
-      phi = glm::radians(89.0f);
-    if (phi < glm::radians(-89.0f))
-      phi = glm::radians(-89.0f);
-
-    prevMousePosCameraFocus = currentMousePos;
-  }
-  else
-     {
-       // Update previous mouse position when button is not pressed to avoid sudden jumps
-       GetCursorPos(&prevMousePosCameraFocus);
-     }
-     cameraPos.x = cameraTarget.x + radius * cos(phi) * cos(theta);
-     cameraPos.y = cameraTarget.y + radius * sin(phi);
-     cameraPos.z = cameraTarget.z + radius * cos(phi) * sin(theta);
-
-     // Calculate the view matrix
-     glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraTarget, glm::vec3(0.0f, 1.0f, 0.0f));
-     // Calculate the new camera position in Cartesian coordinates
-    
-  }
-  
 
 void Window::UpdatePipeline()
 {
   HRESULT hr;
 
-  // wait for the gpu to finish with the command allocator before we reset it
   WaitForPreviousFrame();
 
-  // only reset an allocator once the gpu is done with it. resetting an allocator frees the memory that the command list
-  // was stored in
   ThrowIfFailed(commandAllocator[frameIndex]->Reset());
-
-  // reset the command list
   ThrowIfFailed(commandList->Reset(commandAllocator[frameIndex].Get(), pipelineStateObject));
 
-    if (orbiCam == false)
+  if (!camera->getOrbiCam())
   {
-    UpdateCameraPosition();
-    UpdateCameraDirection();
-    UpdateRotationFromMouse();
+    camera->UpdatePosition();
+    camera->UpdateDirection();
+    camera->UpdateRotationFromMouse();
   }
-  else 
+  else
   {
-    std::wcout << L"orbiCam is true\n";
-    OrbitalCamera();
-    
-  
-    
+    camera->OrbitalCamera();
   }
-  // get aspectratio
-  float aspectRatio = static_cast<float>(width_) / static_cast<float>(height_);
-  // Create individual rotation matrices for each axis
-  glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), alphaX, glm::vec3(1.0f, 0.0f, 0.0f));
-  glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), alphaY, glm::vec3(0.0f, 1.0f, 0.0f));
-  glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), alphaZ, glm::vec3(0.0f, 0.0f, 1.0f));
 
+  float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
 
-  // Combine the rotations
+  glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), camera->getAlphaX(), glm::vec3(1.0f, 0.0f, 0.0f));
+  glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), camera->getAlphaY(), glm::vec3(0.0f, 1.0f, 0.0f));
+  glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), camera->getAlphaZ(), glm::vec3(0.0f, 0.0f, 1.0f));
+
   glm::mat4 rotationMat = rotationZ * rotationY * rotationX;
 
-  glm::mat4 viewMatrix = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-  // near plane 0.1f farplane 100.0f
-
-  glm::mat4 orbitalViewMatrix = glm::lookAt(cameraPos, cameraTarget, cameraUp);
-  glm::mat4 projectionMatrix = glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
-  // Combine matrices to get mvp
+  glm::mat4 viewMatrix        = camera->getViewMatrix();
+  glm::mat4 orbitalViewMatrix = camera->getOrbitalViewMatrix();
+  glm::mat4 projectionMatrix =
+      glm::perspective(glm::radians(camera->getFov()), aspectRatio, camera->getNearPlane(), camera->getFarPlane());
   glm::mat4 mvpMat = projectionMatrix * viewMatrix * rotationMat;
 
   glm::mat4 transformMat;
-  
-  if (orbiCam == false)
+
+  if (!camera->getOrbiCam())
   {
     transformMat = mvpMat;
   }
-  else 
+  else
   {
     transformMat = projectionMatrix * orbitalViewMatrix;
   }
 
-  float fovy = M_PI / 2;
-  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, height_, width_);
+  float       fovy         = M_PI / 2;
+  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);
 
-  // Update the constant buffer with mvp
   UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix, hfovxy_focal, transformMat);
 
-  // Call this onc  to set the initial mouse position
-  InitializeMousePosition();
+  camera->InitializeMousePosition();
 
-  // recording commands into the commandList (which all the commands will be stored in the commandAllocator)
-  //  transition the "frameIndex" render target from the present state to the render target state so the command list
-  //  draws to it starting from here
   auto resBarrierTransition = CD3DX12_RESOURCE_BARRIER::Transition(
       renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
   commandList->ResourceBarrier(1, &resBarrierTransition);
 
   draw();
-  // imgui command list update here
+
+  // Store values in local variables first
+  float     alphaX      = camera->getAlphaX();
+  float     alphaY      = camera->getAlphaY();
+  float     alphaZ      = camera->getAlphaZ();
+  float     cameraSpeed = camera->getCameraSpeed();
+  glm::vec3 cameraPos   = camera->getCameraPos();
+  glm::vec3 cameraFront = camera->getCameraFront();
+  glm::vec3 cameraUp    = camera->getCameraUp();
+  bool      orbiCam     = camera->getOrbiCam();
+  float     nearPlane   = camera->getNearPlane();
+  float     farPlane    = camera->getFarPlane();
+  float     fov         = camera->getFov();
 
   imguiAdapter->startMainImGui();
-  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,  farPlane,  fov);
+  imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,
+                             farPlane, fov);
   drawUI();
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
-  // transition the "frameIndex" render target from the render target state to the present state
   auto resBarrierTransPresent = CD3DX12_RESOURCE_BARRIER::Transition(
       renderTargets[frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
   commandList->ResourceBarrier(1, &resBarrierTransPresent);
 
   ThrowIfFailed(commandList->Close());
 
-  // Execute compute shader
   ExecuteComputeShader();
 }
+
 
 void Window::ExecuteComputeShader()
 {
   HRESULT hr;
 
-  // Reset compute command allocator and command list
   ThrowIfFailed(computeCommandAllocator->Reset());
   ThrowIfFailed(computeCommandList->Reset(computeCommandAllocator.Get(), computePipelineState.Get()));
 
-  // Set descriptor heaps
   ID3D12DescriptorHeap* ppHeaps[] = {uavHeap.Get()};
   computeCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-  // Transition the position buffer to UAV state
   CD3DX12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       positionBuffer.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
   computeCommandList->ResourceBarrier(1, &uavBarrier);
 
-  // Set compute root signature
   computeCommandList->SetComputeRootSignature(computeRootSignature.Get());
 
-  // Set compute shader UAV
   computeCommandList->SetComputeRootUnorderedAccessView(0, positionBuffer->GetGPUVirtualAddress());
 
-  // Dispatch compute shader
   computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(indices.size()) / 256.0f)), 1, 1);
 
-  // Transition the position buffer back to UAV state
   uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
                                                     D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
   computeCommandList->ResourceBarrier(1, &uavBarrier);
 
-  // Close and execute compute command list
   ThrowIfFailed(computeCommandList->Close());
   ID3D12CommandList* ppCommandLists[] = {computeCommandList.Get()};
   computeCommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-  // Signal and wait for the compute queue
   ThrowIfFailed(computeCommandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
   if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
   {
@@ -957,7 +758,6 @@ void Window::ExecuteComputeShader()
     WaitForSingleObject(fenceEvent, INFINITE);
   }
 
-  // Increment the fence value for the next frame
   fenceValue[frameIndex]++;
 }
 
@@ -965,26 +765,19 @@ void Window::WaitForPreviousFrame()
 {
   HRESULT hr;
 
-  // swap the current rtv buffer index so we draw on the correct buffer
   frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-  // if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
-  // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
   if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
   {
-    // fence create an event which is signaled once the fence's current value is "fenceValue"
     hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
     if (FAILED(hr))
     {
-      running_ = false;
+      _running = false;
     }
 
-    // wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
-    // has reached "fenceValue", we know the command queue has finished executing
     WaitForSingleObject(fenceEvent, INFINITE);
   }
 
-  // increment fenceValue for next frame
   fenceValue[frameIndex]++;
 }
 
@@ -1023,8 +816,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     {
       throw std::runtime_error("Vertex data is empty.");
     }
-    vBufferSize = vertices.size() * sizeof(Vertex);
-    // Create default heap for the vertex buffer
+    vBufferSize         = vertices.size() * sizeof(Vertex);
     auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     auto resourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(vBufferSize);
 
@@ -1033,7 +825,6 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
                                                   IID_PPV_ARGS(&vertexBuffer)));
     vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
 
-    // Create upload heap for vertex buffer
     auto            heapPropertiesUpload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     ID3D12Resource* vBufferUploadHeap;
     ThrowIfFailed(device->CreateCommittedResource(&heapPropertiesUpload, D3D12_HEAP_FLAG_NONE, &resourceDesc,
@@ -1041,30 +832,24 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
                                                   IID_PPV_ARGS(&vBufferUploadHeap)));
     vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
-    // Copy vertex data to upload heap
     D3D12_SUBRESOURCE_DATA vertexData = {};
     vertexData.pData                  = vertices.data();
     vertexData.RowPitch               = vBufferSize;
     vertexData.SlicePitch             = vBufferSize;
 
-    // Schedule copy from upload heap to default heap
     UpdateSubresources(commandList.Get(), vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
 
-    // Transition vertex buffer to vertex buffer state
     auto resBarrierVertexBuffer = CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST,
                                                                        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     commandList->ResourceBarrier(1, &resBarrierVertexBuffer);
 
-    // Execute the command list to upload vertex data
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    // Increment fence value
     fenceValue[frameIndex]++;
     ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
-    // Create vertex buffer view
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
     vertexBufferView.StrideInBytes  = sizeof(Vertex);
     vertexBufferView.SizeInBytes    = vBufferSize;
@@ -1087,17 +872,16 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4&
   }
   ConstantBuffer* cbDataBegin = nullptr;
   ThrowIfFailed(constantBuffer[frameIndex]->Map(0, nullptr, reinterpret_cast<void**>(&cbDataBegin)));
-  cbDataBegin->transformMat = transformMat;
-  cbDataBegin->rotationMat = rotationMat; // Update the MVP matrix in the constant buffer
+  cbDataBegin->transformMat  = transformMat;
+  cbDataBegin->rotationMat   = rotationMat;
   cbDataBegin->projectionMat = projectionMat;
-  cbDataBegin->viewMat        = viewMat;
+  cbDataBegin->viewMat       = viewMat;
   cbDataBegin->hfovxy_focal  = hfovxy_focal;
   constantBuffer[frameIndex]->Unmap(0, nullptr);
 }
 
 void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 {
-  // Prepare position and index buffer data
   std::vector<VertexPos> indices(vertices.size());
   for (size_t i = 0; i < vertices.size(); ++i)
   {
@@ -1107,7 +891,6 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 
   size_t positionBufferSize = indices.size() * sizeof(VertexPos);
 
-  // Create upload heap for initial data
   ComPtr<ID3D12Resource> positionUploadBuffer;
   D3D12_HEAP_PROPERTIES  uploadHeapProps  = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   D3D12_RESOURCE_DESC    uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(positionBufferSize);
@@ -1116,13 +899,11 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
                                                 D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                 IID_PPV_ARGS(&positionUploadBuffer)));
 
-  // Copy position data to the upload buffer
   void* pData;
   ThrowIfFailed(positionUploadBuffer->Map(0, nullptr, &pData));
   memcpy(pData, indices.data(), positionBufferSize);
   positionUploadBuffer->Unmap(0, nullptr);
 
-  // Create default heap for the position buffer
   D3D12_HEAP_PROPERTIES defaultHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
   D3D12_RESOURCE_DESC   bufferDesc =
       CD3DX12_RESOURCE_DESC::Buffer(positionBufferSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
@@ -1131,15 +912,12 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
                                                 D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                 IID_PPV_ARGS(&positionBuffer)));
 
-  // Copy data from the upload buffer to the default buffer
   commandList->CopyBufferRegion(positionBuffer.Get(), 0, positionUploadBuffer.Get(), 0, positionBufferSize);
 
-  // Transition position buffer to UAV state
   CD3DX12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
   commandList->ResourceBarrier(1, &uavBarrier);
 
-  // Create a descriptor heap for UAVs
   D3D12_DESCRIPTOR_HEAP_DESC uavHeapDesc = {};
   uavHeapDesc.NumDescriptors             = 1;
   uavHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -1147,7 +925,6 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 
   ThrowIfFailed(device->CreateDescriptorHeap(&uavHeapDesc, IID_PPV_ARGS(&uavHeap)));
 
-  // Create UAV for the position buffer
   D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
   uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_BUFFER;
   uavDesc.Buffer.NumElements               = static_cast<UINT>(indices.size());
