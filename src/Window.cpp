@@ -793,6 +793,7 @@ void Window::UpdateCameraDirection()
     GetCursorPos(&prevMousePosCameraDirection);
   }
 }
+
 void Window::OrbitalCamera()
 {
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
@@ -1079,6 +1080,15 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
     vertexBufferView.StrideInBytes  = sizeof(Vertex);
     vertexBufferView.SizeInBytes    = vBufferSize;
 
+   
+    std::cout << "Vertex anzahl vorhanden:" << vertices.size() << std::endl;
+    
+    for (size_t i = 0; i < std::min(10, static_cast<int>(vertices.size())); ++i)
+    {
+      std::cout << "Vertex " << i << ": Position(" << vertices[i].pos.x << ", " << vertices[i].pos.y << ", "
+                << vertices[i].pos.z << ")\n";
+    }
+
     return true;
   }
   catch (const std::exception& e)
@@ -1221,7 +1231,13 @@ bool Window::InitializeIndexBuffer(const std::vector<uint32_t>& indices)
     indexBufferView.Format         = DXGI_FORMAT_R32_UINT;
     indexBufferView.SizeInBytes    = static_cast<UINT>(bufferSize);
 
-   
+    size_t indexCount = indexBufferView.SizeInBytes / sizeof(uint32_t);
+    std::cout << "Number of indices in the buffer: " << indexCount << std::endl;
+
+    for (size_t i = 0; i < std::min(10, static_cast<int>(indices.size())); ++i)
+    {
+      std::cout << "Index " << i << ": " << indices[i] << std::endl;
+    }
 
     return true;
   }
