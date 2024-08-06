@@ -744,7 +744,15 @@ void Window::ExecuteComputeShader()
 
   computeCommandList->SetComputeRootUnorderedAccessView(0, positionBuffer->GetGPUVirtualAddress());
 
-  computeCommandList->Dispatch(static_cast<UINT>(ceil(static_cast<float>(indices.size()) / 256.0f)), 1, 1);
+  UINT threadGroupCountX = static_cast<UINT>(ceil(static_cast<float>(indices.size()) / 256.0f));
+  UINT threadGroupCountY = 1;
+  UINT threadGroupCountZ = 1;
+
+  // Ensure we are not dispatching zero threads
+  if (threadGroupCountX > 0 && threadGroupCountY > 0 && threadGroupCountZ > 0)
+  {
+    computeCommandList->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+  }
 
   uavBarrier = CD3DX12_RESOURCE_BARRIER::Transition(positionBuffer.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE,
                                                     D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -763,6 +771,7 @@ void Window::ExecuteComputeShader()
 
   fenceValue[frameIndex]++;
 }
+
 
 void Window::WaitForPreviousFrame()
 {
