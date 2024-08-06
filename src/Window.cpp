@@ -699,6 +699,19 @@ void Window::UpdatePipeline()
   imguiAdapter->startMainImGui();
   imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,
                              farPlane, fov);
+
+  camera->setAlphaX(alphaX);
+  camera->setAlphaY(alphaY);
+  camera->setAlphaZ(alphaZ);
+  camera->setCameraSpeed(cameraSpeed);
+  camera->setCameraPos(cameraPos);
+  camera->setCameraFront(cameraFront);
+  camera->setCameraUp(cameraUp);
+  camera->setOrbiCam(orbiCam);
+  camera->setNearPlane(nearPlane);
+  camera->setFarPlane(farPlane);
+  camera->setFov(fov);
+
   drawUI();
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
