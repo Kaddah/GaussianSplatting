@@ -19,6 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -51,6 +52,7 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , camera(std::make_unique<Camera>()) // initializer list
 {
   camera->setWindowDimensions(width, height);
+  
 
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
@@ -482,7 +484,9 @@ void Window::ResizeWindow(int width, int height)
   }
 
   camera->setWindowDimensions(width, height);
+  
 }
+
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -521,6 +525,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         int height = HIWORD(lParam);
         window->ResizeWindow(width, height);
       }
+  
+
+    case WM_MOUSEWHEEL:
+    {
+      if (window && window->camera && window->camera->getOrbiCam())
+      {
+        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+        window->camera->ZoomCamera(delta); // Adjust zoom
+      }
+      return 0;
+    }
       break;
 
     case WM_DESTROY:
@@ -653,6 +668,7 @@ void Window::UpdatePipeline()
   else
   {
     camera->OrbitalCamera();
+    
   }
 
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);

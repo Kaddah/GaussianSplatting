@@ -17,7 +17,9 @@ public:
   void UpdateDirection();
   void UpdateRotationFromMouse();
   void OrbitalCamera();
+  void ZoomCamera(int delta);
   void InitializeMousePosition();
+  
 
   glm::vec3 getPosition() const
   {

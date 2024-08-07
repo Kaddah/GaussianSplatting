@@ -111,6 +111,18 @@ void Camera::InitializeMousePosition()
   prevMousePosCameraDirection = initialMousePos;
 }
 
+void Camera::ZoomCamera(int delta)
+{
+  const float zoomSpeed = 0.006f; // Adjust the speed of zooming
+  radius -= delta * zoomSpeed;
+
+  // Clamp the radius to prevent too much zooming in or out
+  if (radius < 1.0f)
+    radius = 1.0f;
+  if (radius > 50.0f)
+    radius = 50.0f;
+}
+
 void Camera::OrbitalCamera()
 {
   if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
@@ -140,6 +152,10 @@ void Camera::OrbitalCamera()
   cameraPos.y = cameraTarget.y + radius * sin(phi);
   cameraPos.z = cameraTarget.z + radius * cos(phi) * sin(theta);
 }
+
+
+
+
 
 glm::mat4 Camera::updateViewMatrix()
 {

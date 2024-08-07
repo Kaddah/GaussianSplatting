@@ -54,6 +54,7 @@ public:
   void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
 
   void ResizeWindow(int width, int height);
+  std::unique_ptr<Camera> camera;
 
   ~Window();
 
@@ -98,7 +99,7 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   std::unique_ptr<ImGuiAdapter> imguiAdapter;
-  std::unique_ptr<Camera>       camera;
+ 
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
