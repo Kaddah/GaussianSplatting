@@ -487,6 +487,11 @@ void Window::ResizeWindow(int width, int height)
   
 }
 
+std::unique_ptr<Camera>& Window::getCamera()
+{
+  return camera;
+}
+
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -495,6 +500,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return true;
 
   Window* window = nullptr;
+  Camera* camera = window->getCamera().get(); // get camera instance to access its methods
+
   if (msg == WM_NCCREATE)
   {
     CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
@@ -518,6 +525,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
       }
       return 0;
+
     case WM_SIZE:
       if (window)
       {
@@ -526,13 +534,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         window->ResizeWindow(width, height);
       }
   
-
     case WM_MOUSEWHEEL:
     {
-      if (window && window->camera && window->camera->getOrbiCam())
+      if (camera->getOrbiCam())
       {
         int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-        window->camera->ZoomCamera(delta); // Adjust zoom
+        camera->ZoomCamera(delta); // Adjust zoom
       }
       return 0;
     }

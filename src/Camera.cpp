@@ -153,10 +153,6 @@ void Camera::OrbitalCamera()
   cameraPos.z = cameraTarget.z + radius * cos(phi) * sin(theta);
 }
 
-
-
-
-
 glm::mat4 Camera::updateViewMatrix()
 {
   if (orbiCam)
