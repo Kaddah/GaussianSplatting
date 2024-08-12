@@ -7,9 +7,6 @@
 #include <glm/glm.hpp>
 #include <wrl/client.h>
 
-
-
-
 using Microsoft::WRL::ComPtr;
 
 class ImGuiAdapter

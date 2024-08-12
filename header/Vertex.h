@@ -18,8 +18,7 @@ struct Vertex
 struct VertexPos
 {
     glm::vec3 position;
-    uint32_t          index;
+    uint32_t  index;
 };
-
 
 #endif // VERTEX_H

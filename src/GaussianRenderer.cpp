@@ -1,5 +1,7 @@
 #include "GaussianRenderer.h"
 #include "Camera.h" // Include the Camera header
+#include "D3D12Renderer.h"
+#include "ImguiAdapter.h"
 #include "Window.h"
 #include <DxException.h>
 #include <iostream>
@@ -19,26 +21,31 @@ GaussianRenderer::GaussianRenderer(LPCTSTR WindowName, int width, int height, bo
 
 void GaussianRenderer::draw()
 {
-  const auto rtvHandle = getRTVHandle();
+  auto& renderer = this->getRenderer(); // Access the renderer instance
+
+  const auto rtvHandle = renderer->GetRTVHandle();
   // set the render target for the output merger stage (the output of the pipeline)
-  commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+  renderer->GetCommandList()->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
   // Clear the render target by using the ClearRenderTargetView command
   const float clearColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
-  commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+  renderer->GetCommandList()->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
   // draw triangle
-  commandList->SetGraphicsRootSignature(rootSignature);
-  commandList->RSSetViewports(1, &viewport);
-  commandList->RSSetScissorRects(1, &scissorRect);
-  commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-  commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-  commandList->SetGraphicsRootConstantBufferView(0, constantBuffer[frameIndex]->GetGPUVirtualAddress());
-  commandList->DrawInstanced(getQuadVertices().size() / 4, 1, 0, 0); // draw 3 vertices (draw the triangle)
+  renderer->GetCommandList()->SetGraphicsRootSignature(renderer->GetRootSignature());
+  renderer->GetCommandList()->RSSetViewports(1, &renderer->GetViewport());
+  renderer->GetCommandList()->RSSetScissorRects(1, &renderer->GetScissorRect());
+  renderer->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+  renderer->GetCommandList()->IASetVertexBuffers(0, 1, &renderer->GetVertexBufferView());
+  renderer->GetCommandList()->SetGraphicsRootConstantBufferView(0, renderer->GetConstantBufferGPUAddress());
+  renderer->GetCommandList()->DrawInstanced(static_cast<UINT>(getQuadVertices().size() / 4), 1, 0, 0); // draw 3 vertices (draw the triangle)
 }
 
 void GaussianRenderer::drawUI()
 {
+  auto& renderer = this->getRenderer();         // Access the renderer instance
+  auto  camera   = renderer->GetCamera().get(); // Access the camera from the renderer
+
   ImGui::Begin("Gaussian Splatting");
   ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", camera->getCameraPos().x, camera->getCameraPos().y,
               camera->getCameraPos().z);
@@ -65,7 +72,6 @@ void GaussianRenderer::drawUI()
   }
   ImGui::End();
 }
-
 
 std::vector<VertexPos> GaussianRenderer::prepareIndices(const std::vector<Vertex>& vertices)
 {
