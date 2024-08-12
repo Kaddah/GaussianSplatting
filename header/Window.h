@@ -1,4 +1,5 @@
 #pragma once
+#include "Camera.h"
 #include "ImguiAdapter.h"
 #include <D3Dcompiler.h>
 #include <Vertex.h>
@@ -34,20 +35,16 @@ struct ConstantBuffer
 
 class Window
 {
-
 public:
-  Window(LPCTSTR WindowName,
-         int     width, // of window
-         int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd);
+  Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd);
 
-  virtual void draw() = 0;
-  // virtual std::vector<Vertex> prepareTriangle()=0;
+  virtual void                draw()            = 0;
   virtual std::vector<Vertex> prepareTriangle() = 0;
   void                        Stop();
   void                        WaitForPreviousFrame();
   void                        Render();
   void                        mainloop();
-  virtual void drawUI() = 0;
+  virtual void                drawUI() = 0;
   void UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat,
                             HfovxyFocal hfovxy_focal, const glm::mat4& transformMat);
   virtual std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices) = 0;
@@ -57,6 +54,8 @@ public:
   void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
 
   void ResizeWindow(int width, int height);
+ 
+  std::unique_ptr<Camera>& getCamera();
 
   ~Window();
 
@@ -64,60 +63,13 @@ public:
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
-  void UpdateCameraPosition();
-  void UpdateCameraDirection();
-  void UpdateRotationFromMouse();
-  void OrbitalCamera();
-  void InitializeMousePosition();
-
- // enum class CameraMode
- // {
- //   Normal,
- //   Orbital
- // };
-  //CameraMode cameraMode = CameraMode::Normal;
-
-  bool orbiCam = false;
-  
-
-  POINT prevMousePosCameraDirection = {0, 0};
-  POINT prevMousePosRotation        = {0, 0};
-  POINT prevMousePosCameraFocus     = {0, 0};
-
-  //
-  float alphaX  = 0.0f;
-  float alphaY  = 0.0f;
-  float alphaZ  = 0.0f;
-
-  float theta   = 0.0f;
-  float phi     = 0.0f;
-  float radius  = 5.0f; //initial radius of orbitalcamera
-
-  const float mouseSensX = 0.005f;
-  const float mouseSensY = 0.005f;
-  // Camera position and movement variables
-  glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
-  glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-  glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
-  glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-
-  float cameraSpeed = 1.0f;  // Camera speed in meters per second
-  float fov         = 45.0f; // Initial zoom level (FOV)
-
-  float nearPlane = 0.1f;
-  float farPlane  = 100.0f;
-
-  float yaw   = -90.0f; // Initialize to face towards negative z-axis
-  float pitch = 0.0f;
-
 protected:
   int  _width;
   int  _height;
   bool _running;
   bool _fullScreen;
   HWND _hwnd;
-  //  POINT                 prevMousePosRotation        = {0, 0};
-  // POINT                 prevMousePosCameraDirection = {0, 0};
+
   ComPtr<ID3D12Device>         device;
   ComPtr<IDXGISwapChain3>      swapChain;         // swapchain used to switch between render targets
   ComPtr<ID3D12CommandQueue>   commandQueue;      // container for command lists
@@ -148,9 +100,7 @@ protected:
   D3D12_RECT           scissorRect;         // the area to draw in. pixels outside that area will not be drawn onto
 
   std::unique_ptr<ImGuiAdapter> imguiAdapter;
-
-  std::chrono::high_resolution_clock::time_point before;
-  std::chrono::high_resolution_clock::time_point before2;
+  std::unique_ptr<Camera>       camera;
 
   bool InitD3D();
   bool InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);

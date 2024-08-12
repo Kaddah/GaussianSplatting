@@ -27,22 +27,26 @@ ImGuiAdapter::ImGuiAdapter(const ComPtr<ID3D12Device>& device, int frameBufferCo
                       imguiSRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                       imguiSRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 }
+
 ImGuiAdapter::~ImGuiAdapter()
 {
   ImGui_ImplDX12_Shutdown();
   ImGui_ImplWin32_Shutdown();
   ImGui::DestroyContext();
 }
+
 void ImGuiAdapter::startMainImGui()
 {
   ImGui_ImplDX12_NewFrame();
   ImGui_ImplWin32_NewFrame();
   ImGui::NewFrame();
 }
+
 void ImGuiAdapter::renderImGui()
 {
   ImGui::Render();
 }
+
 void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandList)
 {
   commandList->SetDescriptorHeaps(1, imguiSRVDescriptorHeap.GetAddressOf());
@@ -57,34 +61,24 @@ void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, flo
                                 float& farPlane, float& fov)
 {
   ImGui::Begin("Gaussian Splatting");
- 
+
   ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);
 
   ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
-  ImGui::SliderFloat("nearPlane", &nearPlane, 0.01f, 1.0f);
-  ImGui::SliderFloat("farPlane", &farPlane, 50.0f, 500.0f);
+  ImGui::SliderFloat("Near Plane", &nearPlane, 0.01f, 1.0f);
+  ImGui::SliderFloat("Far Plane", &farPlane, 50.0f, 500.0f);
   ImGui::SliderFloat("FOV", &fov, 30.0f, 110.0f);
 
-
- //ImGui::Checkbox("Orbital Camera on/off", &orbiCam) ;
- // if (ImGui::Button("Switch to OrbiCamera"))
- // {
-  //  orbiCam = true;
- // }
   ImGui::Checkbox("Orbital Camera", &orbiCam);
   if (ImGui::Button("Reset Camera"))
   {
-    cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
-	cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-	cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-    fov   = 45.0f; // Initial zoom level (FOV)
-
-    nearPlane = 0.1f;
-    farPlane  = 100.0f;
-
+    cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
+    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+    fov         = 45.0f; // Initial zoom level (FOV)
+    nearPlane   = 0.1f;
+    farPlane    = 100.0f;
   }
-
-
 
   ImGui::Spacing();
   ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", alphaX, alphaY, alphaZ);
@@ -93,6 +87,6 @@ void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, flo
     alphaX = 0.0f;
     alphaY = 0.0f;
     alphaZ = 0.0f;
-  }  
+  }
   ImGui::End();
 }

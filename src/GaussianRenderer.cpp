@@ -1,4 +1,5 @@
 #include "GaussianRenderer.h"
+#include "Camera.h" // Include the Camera header
 #include "Window.h"
 #include <DxException.h>
 #include <iostream>
@@ -39,24 +40,32 @@ void GaussianRenderer::draw()
 void GaussianRenderer::drawUI()
 {
   ImGui::Begin("Gaussian Splatting");
-  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", cameraPos.x, cameraPos.y, cameraPos.z);
-  ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f);
+  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", camera->getCameraPos().x, camera->getCameraPos().y,
+              camera->getCameraPos().z);
+
+  float cameraSpeed = camera->getCameraSpeed();
+  if (ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f))
+  {
+    camera->setCameraSpeed(cameraSpeed);
+  }
+
   if (ImGui::Button("Reset Camera"))
   {
-    cameraPos   = glm::vec3(0.0f, 0.0f, 5.0f);
-    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-    cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+    camera->setCameraPos(glm::vec3(0.0f, 0.0f, 5.0f));
+    camera->setCameraFront(glm::vec3(0.0f, 0.0f, -1.0f));
+    camera->setCameraUp(glm::vec3(0.0f, 1.0f, 0.0f));
   }
   ImGui::Spacing();
-  ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", alphaX, alphaY, alphaZ);
+  ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", camera->getAlphaX(), camera->getAlphaY(), camera->getAlphaZ());
   if (ImGui::Button("Reset Object"))
   {
-    alphaX = 0.0f;
-    alphaY = 0.0f;
-    alphaZ = 0.0f;
+    camera->setAlphaX(0.0f);
+    camera->setAlphaY(0.0f);
+    camera->setAlphaZ(0.0f);
   }
   ImGui::End();
 }
+
 
 std::vector<VertexPos> GaussianRenderer::prepareIndices(const std::vector<Vertex>& vertices)
 {
