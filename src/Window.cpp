@@ -64,45 +64,50 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
   }
 
-  switch (msg)
+  if (window)
   {
-    case WM_KEYDOWN:
-      if (wParam == VK_ESCAPE)
-      {
-        if (MessageBox(0, L"Are you sure you want to exit?", L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
-        {
-          window->Stop();
-          DestroyWindow(hwnd);
-        }
-      }
-      return 0;
+    Camera& camera = window->getRenderer()->GetCameraReference();
 
-    case WM_SIZE:
-      if (window)
-      {
-        int width  = LOWORD(lParam);
-        int height = HIWORD(lParam);
-        window->ResizeWindow(width, height);
-      }
-      return 0;
-
-    case WM_MOUSEWHEEL:
+    switch (msg)
     {
-      auto camera = window->getRenderer()->GetCamera().get();
-      if (camera->getOrbiCam())
-      {
-        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-        camera->ZoomCamera(delta); // Adjust zoom
-      }
-      return 0;
-    }
-    break;
+      case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE)
+        {
+          if (MessageBox(0, L"Are you sure you want to exit?", L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
+          {
+            window->Stop();
+            DestroyWindow(hwnd);
+          }
+        }
+        return 0;
 
-    case WM_DESTROY:
-      window->Stop();
-      PostQuitMessage(0);
-      return 0;
+      case WM_SIZE:
+        if (window)
+        {
+          int width  = LOWORD(lParam);
+          int height = HIWORD(lParam);
+          window->ResizeWindow(width, height);
+        }
+        return 0;
+
+      case WM_MOUSEWHEEL:
+      {
+        if (camera.getOrbiCam())
+        {
+          int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+          camera.ZoomCamera(delta); // Adjust zoom
+        }
+        return 0;
+      }
+      break;
+
+      case WM_DESTROY:
+        window->Stop();
+        PostQuitMessage(0);
+        return 0;
+    }
   }
+  
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 

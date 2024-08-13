@@ -58,7 +58,7 @@ public:
   const D3D12_RECT& GetScissorRect() { return scissorRect; }
   const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() { return vertexBufferView; }
   D3D12_GPU_VIRTUAL_ADDRESS GetConstantBufferGPUAddress() { return constantBuffer[frameIndex]->GetGPUVirtualAddress(); }
-  const std::unique_ptr<Camera>& GetCamera() { return camera; }
+  Camera& GetCameraReference() { return *camera; }
   ComPtr<ID3D12DescriptorHeap> GetRTVDescriptorHeap() const { return rtvDescriptorHeap; }
   int GetFrameIndex() const { return frameIndex; }
   UINT GetRTVDescriptorSize() const { return rtvDescriptorSize; }
