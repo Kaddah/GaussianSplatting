@@ -55,7 +55,7 @@ public:
 
   void ResizeWindow(int width, int height);
  
-  std::unique_ptr<Camera>& getCamera();
+  Camera& getCameraReference();
 
   ~Window();
 

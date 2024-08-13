@@ -487,9 +487,9 @@ void Window::ResizeWindow(int width, int height)
   
 }
 
-std::unique_ptr<Camera>& Window::getCamera()
+Camera& Window::getCameraReference()
 {
-  return camera;
+  return *camera;
 }
 
 
@@ -514,7 +514,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
   if (window)
   {
-    Camera* camera = window->getCamera().get(); // get camera instance to access its methods
+    Camera& camera = window->getCameraReference();
 
     switch (msg)
     {
@@ -540,10 +540,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
       case WM_MOUSEWHEEL:
       {
-        if (camera->getOrbiCam())
+        if (camera.getOrbiCam())
         {
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-          camera->ZoomCamera(delta); // Adjust zoom
+          camera.ZoomCamera(delta); // Adjust zoom
         }
         return 0;
       }
