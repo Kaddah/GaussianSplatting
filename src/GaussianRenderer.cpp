@@ -44,31 +44,31 @@ void GaussianRenderer::draw()
 void GaussianRenderer::drawUI()
 {
   auto& renderer = this->getRenderer();         // Access the renderer instance
-  auto  camera   = renderer->GetCamera().get(); // Access the camera from the renderer
+  Camera& camera   = renderer->GetCameraReference(); // Access the camera from the renderer
 
   ImGui::Begin("Gaussian Splatting");
-  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", camera->getCameraPos().x, camera->getCameraPos().y,
-              camera->getCameraPos().z);
+  ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", camera.getCameraPos().x, camera.getCameraPos().y,
+              camera.getCameraPos().z);
 
-  float cameraSpeed = camera->getCameraSpeed();
+  float cameraSpeed = camera.getCameraSpeed();
   if (ImGui::SliderFloat("Camera Speed", &cameraSpeed, 1.0f, 10.0f))
   {
-    camera->setCameraSpeed(cameraSpeed);
+    camera.setCameraSpeed(cameraSpeed);
   }
 
   if (ImGui::Button("Reset Camera"))
   {
-    camera->setCameraPos(glm::vec3(0.0f, 0.0f, 5.0f));
-    camera->setCameraFront(glm::vec3(0.0f, 0.0f, -1.0f));
-    camera->setCameraUp(glm::vec3(0.0f, 1.0f, 0.0f));
+    camera.setCameraPos(glm::vec3(0.0f, 0.0f, 5.0f));
+    camera.setCameraFront(glm::vec3(0.0f, 0.0f, -1.0f));
+    camera.setCameraUp(glm::vec3(0.0f, 1.0f, 0.0f));
   }
   ImGui::Spacing();
-  ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", camera->getAlphaX(), camera->getAlphaY(), camera->getAlphaZ());
+  ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", camera.getAlphaX(), camera.getAlphaY(), camera.getAlphaZ());
   if (ImGui::Button("Reset Object"))
   {
-    camera->setAlphaX(0.0f);
-    camera->setAlphaY(0.0f);
-    camera->setAlphaZ(0.0f);
+    camera.setAlphaX(0.0f);
+    camera.setAlphaY(0.0f);
+    camera.setAlphaZ(0.0f);
   }
   ImGui::End();
 }

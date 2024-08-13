@@ -197,7 +197,7 @@ void Window::mainloop()
   }
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
-{
-  return CD3DX12_CPU_DESCRIPTOR_HANDLE(renderer->GetRTVHandle());
-}
+//CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
+//{
+//  return CD3DX12_CPU_DESCRIPTOR_HANDLE(renderer->GetRTVHandle());
+//}

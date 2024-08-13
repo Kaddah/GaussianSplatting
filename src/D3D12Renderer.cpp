@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "D3D12Renderer.h"
 #include "Shader.h"
 #include "Vertex.h"
@@ -8,6 +10,7 @@
 #include <glm/gtx/transform.hpp>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 
 using namespace DirectX;
 

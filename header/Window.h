@@ -21,7 +21,6 @@ public:
 
 private:
   bool                          InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName);
-  CD3DX12_CPU_DESCRIPTOR_HANDLE getRTVHandle();
 
   int  _width;
   int  _height;
