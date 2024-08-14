@@ -64,6 +64,8 @@ public:
   int GetFrameIndex() const { return frameIndex; }
   UINT GetRTVDescriptorSize() const { return rtvDescriptorSize; }
 
+  void SetVertices(const std::vector<Vertex>& vertices);
+
 private:
   void UpdatePipeline();
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);

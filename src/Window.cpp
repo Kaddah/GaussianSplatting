@@ -171,8 +171,9 @@ void Window::mainloop()
   MSG msg;
   ZeroMemory(&msg, sizeof(MSG));
 
-  renderer->InitializeVertexBuffer(vertices);
-  renderer->UpdateVertexBuffer(vertices);
+  renderer->SetVertices(vertices);
+  // renderer->InitializeVertexBuffer(vertices);
+  // renderer->UpdateVertexBuffer(vertices);
 
   while (_running)
   {
@@ -196,8 +197,3 @@ void Window::mainloop()
     Render();
   }
 }
-
-//CD3DX12_CPU_DESCRIPTOR_HANDLE Window::getRTVHandle()
-//{
-//  return CD3DX12_CPU_DESCRIPTOR_HANDLE(renderer->GetRTVHandle());
-//}

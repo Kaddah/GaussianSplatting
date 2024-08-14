@@ -651,6 +651,13 @@ HfovxyFocal D3D12Renderer::calculateHfovxyFocal(float fovy, float _height, float
   return result;
 }
 
+void D3D12Renderer::SetVertices(const std::vector<Vertex>& vertices)
+{
+  this->vertices = vertices;
+  InitializeVertexBuffer(vertices);
+  UpdateVertexBuffer(vertices);
+}
+
 void D3D12Renderer::UpdatePipeline()
 {
   HRESULT hr;
