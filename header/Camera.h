@@ -111,6 +111,16 @@ public:
     cameraUp = value;
   }
 
+  glm::vec3 getCameraTarget() const
+  {
+    return cameraTarget;
+  }
+
+  void setCameraTarget(const glm::vec3& value)
+  {
+    cameraTarget = value;
+  }
+
   float getCameraSpeed() const
   {
     return cameraSpeed;
@@ -146,6 +156,43 @@ public:
   {
     farPlane = value;
   }
+  
+  float getPhi() const
+  {
+    return phi;
+  }
+
+  void setPhi(float value)
+  {
+    phi = value;
+  }
+     
+
+  float getTheta() const
+  {
+    return theta;
+  }
+
+  void setTheta(float value)
+  {
+      theta = value;
+  }
+
+  float getRadius() const
+  {
+    return radius;
+  }
+
+  void setRadius(float value)
+  {
+    radius = value;
+  }
+
+
+
+
+
+ 
 
 private:
   bool orbiCam = false;

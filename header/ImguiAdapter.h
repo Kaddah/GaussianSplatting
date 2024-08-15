@@ -24,7 +24,7 @@ public:
 
   void createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos,
                     glm::vec3& cameraFront, glm::vec3& cameraUp, bool& orbiCam, float& nearPlane, float& farPlane,
-                    float& fov);
+                    float& fov,float& phi, float& theta, float& radius, glm::vec3& cameraTarget);
 
 private:
   ComPtr<ID3D12DescriptorHeap> imguiSRVDescriptorHeap;

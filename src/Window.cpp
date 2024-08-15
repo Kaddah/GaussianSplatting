@@ -720,14 +720,19 @@ void Window::UpdatePipeline()
   glm::vec3 cameraPos   = camera->getCameraPos();
   glm::vec3 cameraFront = camera->getCameraFront();
   glm::vec3 cameraUp    = camera->getCameraUp();
+  glm::vec3 cameraTarget = camera->getCameraTarget();
   bool      orbiCam     = camera->getOrbiCam();
   float     nearPlane   = camera->getNearPlane();
   float     farPlane    = camera->getFarPlane();
   float     fov         = camera->getFov();
+  float     phi         = camera->getPhi();
+  float     theta       = camera->getTheta();
+  float     radius       = camera->getRadius();
+
 
   imguiAdapter->startMainImGui();
   imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,
-                             farPlane, fov);
+                             farPlane, fov, phi, theta,radius, cameraTarget);
 
   camera->setAlphaX(alphaX);
   camera->setAlphaY(alphaY);
@@ -740,6 +745,10 @@ void Window::UpdatePipeline()
   camera->setNearPlane(nearPlane);
   camera->setFarPlane(farPlane);
   camera->setFov(fov);
+  camera->setPhi(phi);
+  camera->setTheta(theta);
+  camera->setRadius(radius);
+  camera->setCameraTarget(cameraTarget);
 
   drawUI();
   imguiAdapter->renderImGui();

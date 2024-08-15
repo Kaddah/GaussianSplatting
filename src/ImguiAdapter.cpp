@@ -58,7 +58,8 @@ void ImGuiAdapter::commandList(const ComPtr<ID3D12GraphicsCommandList>& commandL
 }
 void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, float& cameraSpeed, glm::vec3& cameraPos,
                                 glm::vec3& cameraFront, glm::vec3& cameraUp, bool& orbiCam, float& nearPlane,
-                                float& farPlane, float& fov)
+                                float& farPlane, float& fov, float& phi, float& theta, float& radius,
+                                glm::vec3& cameraTarget)
 {
   ImGui::Begin("Gaussian Splatting");
 
@@ -78,7 +79,13 @@ void ImGuiAdapter::createWindow(float& alphaX, float& alphaY, float& alphaZ, flo
     fov         = 45.0f; // Initial zoom level (FOV)
     nearPlane   = 0.1f;
     farPlane    = 100.0f;
+
+    theta        = 0.0f;
+    phi          = 0.0f;
+    radius       = 5.0f;                        // or whatever the initial radius is
+    cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f); // or whatever the initial target is
   }
+  
 
   ImGui::Spacing();
   ImGui::Text("Object Position: (%.2f, %.2f, %.2f)", alphaX, alphaY, alphaZ);
