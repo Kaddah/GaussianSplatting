@@ -18,6 +18,7 @@
 #include <Shader.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
+#include <memory>
 
 
 using namespace DirectX;
@@ -636,6 +637,19 @@ void Window::mainloop()
   ZeroMemory(&msg, sizeof(MSG));
 
   InitializeVertexBuffer(vertices);
+
+   // Create and initialize the Index Buffer based on vertices count
+  std::vector<uint32_t> indices(vertices.size());
+
+  for (size_t i = 0; i < indices.size(); ++i)
+  {
+    indices[i] = static_cast<uint32_t>(i);
+  }
+
+  // Initialize Index Buffer
+  InitializeIndexBuffer(indices);
+
+
   UpdateVertexBuffer(vertices);
 
   vertIndex = prepareIndices(vertices);
@@ -982,4 +996,159 @@ void Window::InitializeComputeBuffer(const std::vector<Vertex>& vertices)
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE uavHandle(uavHeap->GetCPUDescriptorHandleForHeapStart());
   device->CreateUnorderedAccessView(positionBuffer.Get(), nullptr, &uavDesc, uavHandle);
+}
+
+bool Window::InitializeIndexBuffer(const std::vector<uint32_t>& indices)
+{
+  try
+  {
+    if (indices.empty())
+    {
+      throw std::runtime_error("Index data is empty.");
+    }
+
+    size_t bufferSize = indices.size() * sizeof(uint32_t);
+
+    ComPtr<ID3D12CommandAllocator> commandAllocator;
+    ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
+
+    // Create default heap for the index buffer
+    CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+    ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_COPY_DEST, // Initial state for copying
+                                                  nullptr, IID_PPV_ARGS(&indexBuffer)));
+
+    indexBuffer->SetName(L"Index Buffer Resource Heap");
+
+    // Create the upload heap
+    CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+    ComPtr<ID3D12Resource>  indexBufferUploadHeap;
+    ThrowIfFailed(
+        device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                        D3D12_RESOURCE_STATE_GENERIC_READ, // Upload heaps must be in this state
+                                        nullptr, IID_PPV_ARGS(&indexBufferUploadHeap)));
+
+    // Map and copy the index data to the upload heap
+    void* pMappedData = nullptr;
+    ThrowIfFailed(indexBufferUploadHeap->Map(0, nullptr, &pMappedData));
+    memcpy(pMappedData, indices.data(), bufferSize);
+    indexBufferUploadHeap->Unmap(0, nullptr);
+
+    ThrowIfFailed(commandAllocator->Reset());
+
+    // Reset the command list before recording commands
+    commandList->Reset(commandAllocator.Get(), nullptr);
+
+    // Copy from the upload heap to the default heap
+    commandList->CopyBufferRegion(indexBuffer.Get(), 0, indexBufferUploadHeap.Get(), 0, bufferSize);
+
+    // Transition the index buffer to the INDEX_BUFFER state
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        indexBuffer.Get(),
+        D3D12_RESOURCE_STATE_COPY_DEST,     // Before the copy, it was in this state
+        D3D12_RESOURCE_STATE_INDEX_BUFFER); // After the copy, transition to this state
+    commandList->ResourceBarrier(1, &barrier);
+
+    // Close the command list
+    ThrowIfFailed(commandList->Close());
+
+    // Execute the command list
+    ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
+    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // Wait for GPU to finish processing the command list
+    fenceValue[frameIndex]++;
+    ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
+
+    if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
+    {
+      ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent));
+      WaitForSingleObject(fenceEvent, INFINITE);
+    }
+
+    // Initialize the index buffer view
+    indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+    indexBufferView.Format         = DXGI_FORMAT_R32_UINT;
+    indexBufferView.SizeInBytes    = static_cast<UINT>(bufferSize);
+
+    size_t indexCount = indexBufferView.SizeInBytes / sizeof(uint32_t);
+    std::cout << "Number of indices in the buffer: " << indexCount << std::endl;
+
+    for (size_t i = 0; i < std::min(10, static_cast<int>(indices.size())); ++i)
+    {
+      std::cout << "Index " << i << ": " << indices[i] << std::endl;
+    }
+
+    return true;
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Error initializing index buffer: " << e.what() << std::endl;
+    return false;
+  }
+}
+
+void Window::UpdateIndexBuffer(const std::vector<uint32_t>& indices)
+{
+  if (!indexBuffer)
+  {
+    throw std::runtime_error("Index buffer is not initialized.");
+  }
+
+  if (indices.empty())
+  {
+    throw std::runtime_error("Index data is empty.");
+  }
+
+  size_t newValue = indices.size() * sizeof(uint32_t);
+
+  // Create the upload heap to temporarily hold the new index data
+  CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+  CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(newValue);
+  ComPtr<ID3D12Resource>  indexBufferUploadHeap;
+  ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                D3D12_RESOURCE_STATE_GENERIC_READ, // Upload heaps must be in this state
+                                                nullptr, IID_PPV_ARGS(&indexBufferUploadHeap)));
+
+  // Map the upload heap and copy the index data to it
+  void* pMappedData = nullptr;
+  ThrowIfFailed(indexBufferUploadHeap->Map(0, nullptr, &pMappedData));
+  memcpy(pMappedData, indices.data(), newValue);
+  indexBufferUploadHeap->Unmap(0, nullptr);
+
+  // Reset the command list and allocator before recording commands
+  ThrowIfFailed(commandAllocator->Reset());
+  ThrowIfFailed(commandList->Reset(commandAllocator->Get(), nullptr));
+
+  // Copy the data from the upload heap to the index buffer in GPU memory
+  commandList->CopyBufferRegion(indexBuffer.Get(), 0, indexBufferUploadHeap.Get(), 0, newValue);
+
+  // No need for a resource barrier on the upload heap, only transition the default heap resource
+  CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      indexBuffer.Get(),
+      D3D12_RESOURCE_STATE_COPY_DEST,     // Assume it was in this state after the copy
+      D3D12_RESOURCE_STATE_INDEX_BUFFER); // Transition to this state for use as an index buffer
+  commandList->ResourceBarrier(1, &barrier);
+
+  // Close the command list
+  ThrowIfFailed(commandList->Close());
+
+  // Execute the command list
+  ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
+  commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+  // Wait for the GPU to finish processing the command list
+  fenceValue[frameIndex]++;
+  ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
+
+  if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
+  {
+    ThrowIfFailed(fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent));
+    WaitForSingleObject(fenceEvent, INFINITE);
+  }
+
+  // Update the size of the index buffer view to reflect the new size
+  indexBufferView.SizeInBytes = static_cast<UINT>(newValue);
 }
