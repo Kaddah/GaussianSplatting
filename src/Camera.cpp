@@ -63,7 +63,7 @@ void Camera::UpdateDirection()
 
     glm::vec3 direction;
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = 0.0f;
+    direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(direction);
 
@@ -117,10 +117,10 @@ void Camera::ZoomCamera(int delta)
   radius -= delta * zoomSpeed;
 
   // Clamp the radius to prevent too much zooming in or out
-  if (radius < 1.0f)
-    radius = 1.0f;
-  if (radius > 50.0f)
-    radius = 50.0f;
+ // if (radius < 1.0f)
+ //   radius = 1.0f;
+ // if (radius > 50.0f)
+ //   radius = 50.0f;
 }
 
 void Camera::OrbitalCamera()
@@ -133,11 +133,15 @@ void Camera::OrbitalCamera()
     int deltaX = currentMousePos.x - prevMousePosCameraFocus.x;
     int deltaY = currentMousePos.y - prevMousePosCameraFocus.y;
 
-    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) // Shift key is pressed
+    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) // Shift key
     {
-      // Update camera target position
+
+      glm::vec3 direction = glm::normalize(cameraPos - cameraTarget);
       cameraTarget.x += deltaX * targetSensX;
       cameraTarget.y += deltaY * targetSensY;
+      cameraTarget.z += (deltaX + deltaY) * targetSensZ * direction.z;
+      ;
+      
     }
     else
     {

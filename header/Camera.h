@@ -212,9 +212,9 @@ private:
   const float mouseSensX = 0.005f;
   const float mouseSensY = 0.005f;
 
-  const float targetSensX = 0.05f;
-  const float targetSensY = 0.05f;
-
+  const float targetSensX = 0.07f;
+  const float targetSensY = 0.07f;
+  const float targetSensZ = 0.07f;
 
   glm::vec3 cameraPos    = glm::vec3(0.0f, 0.0f, 5.0f);
   glm::vec3 cameraFront  = glm::vec3(0.0f, 0.0f, -1.0f);
