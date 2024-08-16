@@ -133,14 +133,22 @@ void Camera::OrbitalCamera()
     int deltaX = currentMousePos.x - prevMousePosCameraFocus.x;
     int deltaY = currentMousePos.y - prevMousePosCameraFocus.y;
 
-    theta += deltaX * mouseSensX;
-    phi -= deltaY * mouseSensY;
+    if (GetAsyncKeyState(VK_SHIFT) & 0x8000) // Shift key is pressed
+    {
+      // Update camera target position
+      cameraTarget.x += deltaX * targetSensX;
+      cameraTarget.y += deltaY * targetSensY;
+    }
+    else
+    {
+      theta += deltaX * mouseSensX;
+      phi -= deltaY * mouseSensY;
 
-    if (phi > glm::radians(89.0f))
-      phi = glm::radians(89.0f);
-    if (phi < glm::radians(-89.0f))
-      phi = glm::radians(-89.0f);
-
+      if (phi > glm::radians(89.0f))
+        phi = glm::radians(89.0f);
+      if (phi < glm::radians(-89.0f))
+        phi = glm::radians(-89.0f);
+    }
     prevMousePosCameraFocus = currentMousePos;
   }
   else
