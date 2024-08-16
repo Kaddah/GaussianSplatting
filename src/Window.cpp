@@ -19,6 +19,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <memory>
+#include "DepthSort.h"
+
 
 
 using namespace DirectX;
@@ -39,7 +41,7 @@ std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
 ComPtr<ID3D12Resource>       positionBuffer;
-std::vector<VertexPos>       indices;
+std::vector<uint32_t>       indices;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
 size_t vBufferSize;
@@ -646,13 +648,16 @@ void Window::mainloop()
     indices[i] = static_cast<uint32_t>(i);
   }
 
+    glm::vec3 cameraPosition = camera->getCameraPos();
+  SortIndicesByDepth(cameraPosition, vertices, indices);
+
   // Initialize Index Buffer
   InitializeIndexBuffer(indices);
 
 
   UpdateVertexBuffer(vertices);
 
-  vertIndex = prepareIndices(vertices);
+  //vertIndex = prepareIndices(vertices);
 
   while (_running)
   {
@@ -742,7 +747,6 @@ void Window::UpdatePipeline()
   float     phi         = camera->getPhi();
   float     theta       = camera->getTheta();
   float     radius       = camera->getRadius();
-
 
   imguiAdapter->startMainImGui();
   imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,
