@@ -20,12 +20,11 @@ struct VS_INPUT
 
 struct VS_OUTPUT
 {
-    float4 pos : SV_POSITION;
-    float4 color : COLOR;
-    float opacity : TEXCOORD18;
-    float3 conic : TEXCOORD19; 
-    float3 hfovxy_focal : TEXCOORD20;
-    float2 coordxy : TEXCOORD21;
+    float4 pos : SV_POSITION;    
+    float3 color : COLOR0;
+    float alpha : COLOR1;
+    float3 cov2d : COLOR2;
+    //float3 conic : COLOR2;
 };
 
 static const float SH_C0 = 0.2820947918f;
@@ -124,16 +123,12 @@ float3 computeCov2D(float4 mean_view, float focal_x, float focal_y, float tan_fo
 
 
 VS_OUTPUT main(VS_INPUT input)
-{
-    VS_OUTPUT output;
-    output.pos = mul(transformMat, input.pos);
-    output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
-    
+{  
     float4 pos_view = mul(viewMat, input.pos);
     float4 pos_screen = mul(projectionMat, pos_view);
     
     float3x3 cov3d = computeCov3D(input.scale, input.rotation);
-    float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
+    
     float3 cov2d = computeCov2D(pos_view,
                               hfovxy_focal.z,
                               hfovxy_focal.z,
@@ -141,22 +136,16 @@ VS_OUTPUT main(VS_INPUT input)
                               hfovxy_focal.y,
                               cov3d,
                               viewMat);
-
-    float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
+                                      
+    VS_OUTPUT output;    
+    output.pos = mul(transformMat, input.pos);
+    output.color = float4(computeColorFromSH(input.pos.xyz, input.f_rest), 1.0f);
+    output.alpha = input.opacity;
     
-    float det_inv = 1.f / det;
-    float3 conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
+    output.cov2d = cov2d;
     
-    float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z));
-    float2 quadwh_ndc = quadwh_scr / wh * 2;
-    pos_screen.xy = pos_screen.xy + input.pos.xy * quadwh_ndc;
-    float2 coordxy = input.pos.xy * quadwh_scr;
     
-    output.conic = conic;
-    output.hfovxy_focal = hfovxy_focal;
-    output.coordxy = coordxy;
-    output.opacity = input.opacity;
-
+    
     return output;
 }
 

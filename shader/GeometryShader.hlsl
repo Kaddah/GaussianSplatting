@@ -1,68 +1,70 @@
+cbuffer ConstantBuffer : register(b0)
+{
+    float4x4 transformMat;
+    
+    float4x4 rotationMat;
+    float4x4 projectionMat;
+    float4x4 viewMat;
+    float3 hfovxy_focal;
+};
+
 struct GS_INPUT
 {
-    float4 pos : SV_POSITION;
-    float4 color : COLOR;
-    float opacity : TEXCOORD18;
-    float3 conic : TEXCOORD19;
-    float3 hfovxy_focal : TEXCOORD20;
-    float2 coordxy : TEXCOORD21;
+    float4 pos : SV_POSITION;    
+    float3 color : COLOR0;
+    float alpha : COLOR1;
+    float3 cov2d : COLOR2;
 };
 
 struct GS_OUTPUT
 {
     float4 pos : SV_POSITION;
-    float4 color : COLOR;
-    float2 offset : OFFSET;
-    float opacity : TEXCOORD18;
-    float3 conic : TEXCOORD19;
-    float3 hfovxy_focal : TEXCOORD20;
-    float2 coordxy : TEXCOORD21;
+    float3 color : COLOR0;
+    float alpha : COLOR1;
+    float3 conic : COLOR2;
+    float2 coordxy : COLOR3;
 };
 
-static const int numTriangles = 16;
+static const int numTriangles = 2;
 
-[maxvertexcount(numTriangles * 3)]void main(point GS_INPUT input[1], inout TriangleStream<GS_OUTPUT> outputStream)
-{
-    float angleStep = 2.0 * 3.14159265359 / numTriangles;
-    float sigma = 0.1;
+[maxvertexcount(4)] void main(point GS_INPUT input[1], inout TriangleStream<GS_OUTPUT> outputStream){
 
-    GS_OUTPUT centerOutput;
-    centerOutput.pos = input[0].pos;
-    centerOutput.color = input[0].color;
-    centerOutput.offset = float2(0.0, 0.0);
-    centerOutput.opacity = input[0].opacity;
-    centerOutput.conic = input[0].conic;
-    centerOutput.hfovxy_focal = input[0].hfovxy_focal;
-    centerOutput.coordxy = input[0].coordxy;
-
-    for (int j = 0; j < numTriangles; ++j)
-    {
-        float angle0 = j * angleStep;
-        float angle1 = (j + 1) * angleStep;
-        float2 offset0 = float2(cos(angle0), sin(angle0)) * sigma;
-        float2 offset1 = float2(cos(angle1), sin(angle1)) * sigma;
-
-        GS_OUTPUT output0, output1;
-
-        output0.pos = input[0].pos + float4(offset0.x, offset0.y, 0.0f, 0.0f);
-        output0.color = input[0].color;
-        output0.offset = offset0;
-        output0.opacity = input[0].opacity;
-        output0.conic = input[0].conic;
-        output0.hfovxy_focal = input[0].hfovxy_focal;
-        output0.coordxy = input[0].coordxy;
-
-        output1.pos = input[0].pos + float4(offset1.x, offset1.y, 0.0f, 0.0f);
-        output1.color = input[0].color;
-        output1.offset = offset1;
-        output1.opacity = input[0].opacity;
-        output1.conic = input[0].conic;
-        output1.hfovxy_focal = input[0].hfovxy_focal;
-        output1.coordxy = input[0].coordxy;
-
-        outputStream.Append(centerOutput);
-        outputStream.Append(output0);
-        outputStream.Append(output1);
-        outputStream.RestartStrip();
-    }
+    float det = (input[0].cov2d.x * input[0].cov2d.z - input[0].cov2d.y * input[0].cov2d.y);
+    float det_inv = 1.f / det;
+    
+    float3 conic = det_inv * float3(input[0].cov2d.z, -input[0].cov2d.y, input[0].cov2d.x);
+    
+    float2 quadwh_scr = float2(3.f * sqrt(input[0].cov2d.x), 3.f * sqrt(input[0].cov2d.z));
+    
+    float2 wh = 2 * hfovxy_focal.xy * hfovxy_focal.z;
+    float2 quadwh_ndc = quadwh_scr / wh * 2;
+    
+    quadwh_ndc = float2(0.1, 0.1); // TODO
+    
+    GS_OUTPUT output;
+    output.color = input[0].color.rgb;
+    output.alpha = input[0].alpha;
+    output.conic = conic;
+        
+    float2 pos;
+    
+    pos = float2(-1, 1);
+    output.pos     = input[0].pos + float4(pos * quadwh_ndc, 0, 0);
+    output.coordxy = pos * quadwh_scr;    
+    outputStream.Append(output);
+    
+    pos = float2(1, 1);
+    output.pos     = input[0].pos + float4(pos * quadwh_ndc, 0, 0);
+    output.coordxy = pos * quadwh_scr;    
+    outputStream.Append(output);    
+    
+    pos = float2(-1, -1);
+    output.pos     = input[0].pos + float4(pos * quadwh_ndc, 0, 0);
+    output.coordxy = pos * quadwh_scr;    
+    outputStream.Append(output);
+    
+    pos = float2(1, -1);
+    output.pos     = input[0].pos + float4(pos * quadwh_ndc, 0, 0);
+    output.coordxy = pos * quadwh_scr;    
+    outputStream.Append(output);
 }

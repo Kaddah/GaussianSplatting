@@ -10,6 +10,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "DepthSort.h"
 #include "ImguiAdapter.h"
 #include "d3dx12.h"
 #include <DxException.h>
@@ -19,19 +20,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <memory>
-#include "DepthSort.h"
-
-
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-HfovxyFocal calculateHfovxyFocal(float fovy, float _height, float _width)
+glm::vec3 calculateHfovxyFocal(float fovy, float _height, float _width)
 {
-  HfovxyFocal result;
-  result.htany = tan(fovy / 2.0f);
-  result.htanx = result.htany / _height * _width;
-  result.focal = _height / (2.0f * result.htany);
+  glm::vec3 result;
+  result.y     = tan(fovy / 2.0f);
+  result.x     = result.y / _height * _width;
+  result.z = _height / (2.0f * result.y);
   return result;
 }
 
@@ -41,7 +39,7 @@ std::vector<VertexPos> vertIndex;
 
 ComPtr<ID3D12DescriptorHeap> uavHeap;
 ComPtr<ID3D12Resource>       positionBuffer;
-std::vector<uint32_t>       indices;
+std::vector<uint32_t>        indices;
 ComPtr<ID3D12CommandQueue>   computeCommandQueue;
 
 size_t vBufferSize;
@@ -55,7 +53,6 @@ Window::Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINST
     , camera(std::make_unique<Camera>()) // initializer list
 {
   camera->setWindowDimensions(width, height);
-  
 
   if (!InitializeWindow(hInstance, nShowCmd, fullScreen, WindowName))
   {
@@ -487,14 +484,12 @@ void Window::ResizeWindow(int width, int height)
   }
 
   camera->setWindowDimensions(width, height);
-  
 }
 
 Camera& Window::getCameraReference()
 {
   return *camera;
 }
-
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -560,7 +555,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
-
 
 bool Window::InitializeWindow(HINSTANCE hInstance, int ShowWnd, bool fullscreen, LPCWSTR windowName)
 {
@@ -640,7 +634,7 @@ void Window::mainloop()
 
   InitializeVertexBuffer(vertices);
 
-   // Create and initialize the Index Buffer based on vertices count
+  // Create and initialize the Index Buffer based on vertices count
   std::vector<uint32_t> indices(vertices.size());
 
   for (size_t i = 0; i < indices.size(); ++i)
@@ -648,16 +642,15 @@ void Window::mainloop()
     indices[i] = static_cast<uint32_t>(i);
   }
 
-    glm::vec3 cameraPosition = camera->getCameraPos();
+  glm::vec3 cameraPosition = camera->getCameraPos();
   SortIndicesByDepth(cameraPosition, vertices, indices);
 
   // Initialize Index Buffer
   InitializeIndexBuffer(indices);
 
-
   UpdateVertexBuffer(vertices);
 
-  //vertIndex = prepareIndices(vertices);
+  // vertIndex = prepareIndices(vertices);
 
   while (_running)
   {
@@ -700,7 +693,6 @@ void Window::UpdatePipeline()
   else
   {
     camera->OrbitalCamera();
-    
   }
 
   float aspectRatio = static_cast<float>(_width) / static_cast<float>(_height);
@@ -719,7 +711,7 @@ void Window::UpdatePipeline()
   glm::mat4 transformMat = mvpMat;
 
   float       fovy         = M_PI / 2;
-  HfovxyFocal hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);
+  glm::vec3 hfovxy_focal = calculateHfovxyFocal(fovy, _height, _width);
 
   UpdateConstantBuffer(mvpMat, projectionMatrix, viewMatrix, hfovxy_focal, transformMat);
 
@@ -732,25 +724,25 @@ void Window::UpdatePipeline()
   draw();
 
   // Store values in local variables first
-  float     alphaX      = camera->getAlphaX();
-  float     alphaY      = camera->getAlphaY();
-  float     alphaZ      = camera->getAlphaZ();
-  float     cameraSpeed = camera->getCameraSpeed();
-  glm::vec3 cameraPos   = camera->getCameraPos();
-  glm::vec3 cameraFront = camera->getCameraFront();
-  glm::vec3 cameraUp    = camera->getCameraUp();
+  float     alphaX       = camera->getAlphaX();
+  float     alphaY       = camera->getAlphaY();
+  float     alphaZ       = camera->getAlphaZ();
+  float     cameraSpeed  = camera->getCameraSpeed();
+  glm::vec3 cameraPos    = camera->getCameraPos();
+  glm::vec3 cameraFront  = camera->getCameraFront();
+  glm::vec3 cameraUp     = camera->getCameraUp();
   glm::vec3 cameraTarget = camera->getCameraTarget();
-  bool      orbiCam     = camera->getOrbiCam();
-  float     nearPlane   = camera->getNearPlane();
-  float     farPlane    = camera->getFarPlane();
-  float     fov         = camera->getFov();
-  float     phi         = camera->getPhi();
-  float     theta       = camera->getTheta();
+  bool      orbiCam      = camera->getOrbiCam();
+  float     nearPlane    = camera->getNearPlane();
+  float     farPlane     = camera->getFarPlane();
+  float     fov          = camera->getFov();
+  float     phi          = camera->getPhi();
+  float     theta        = camera->getTheta();
   float     radius       = camera->getRadius();
 
   imguiAdapter->startMainImGui();
   imguiAdapter->createWindow(alphaX, alphaY, alphaZ, cameraSpeed, cameraPos, cameraFront, cameraUp, orbiCam, nearPlane,
-                             farPlane, fov, phi, theta,radius, cameraTarget);
+                             farPlane, fov, phi, theta, radius, cameraTarget);
 
   camera->setAlphaX(alphaX);
   camera->setAlphaY(alphaY);
@@ -780,7 +772,6 @@ void Window::UpdatePipeline()
 
   ExecuteComputeShader();
 }
-
 
 void Window::ExecuteComputeShader()
 {
@@ -827,7 +818,6 @@ void Window::ExecuteComputeShader()
 
   fenceValue[frameIndex]++;
 }
-
 
 void Window::WaitForPreviousFrame()
 {
@@ -932,7 +922,7 @@ bool Window::InitializeVertexBuffer(const std::vector<Vertex>& vertices)
 }
 
 void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMat,
-                                  const glm::mat4& viewMat, HfovxyFocal hfovxy_focal, const glm::mat4& transformMat)
+                                  const glm::mat4& viewMat, const glm::vec3& hfovxy_focal, const glm::mat4& transformMat)
 {
   if (!constantBuffer[frameIndex])
   {
@@ -945,6 +935,7 @@ void Window::UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4&
   cbDataBegin->projectionMat = projectionMat;
   cbDataBegin->viewMat       = viewMat;
   cbDataBegin->hfovxy_focal  = hfovxy_focal;
+
   constantBuffer[frameIndex]->Unmap(0, nullptr);
 }
 

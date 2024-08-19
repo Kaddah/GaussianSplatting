@@ -17,20 +17,13 @@ using Microsoft::WRL::ComPtr;
 
 constexpr int frameBufferCount = 3; // number of buffers (2 = double buffering, 3 = tripple buffering)
 
-struct HfovxyFocal
-{
-  float htany;
-  float htanx;
-  float focal;
-};
-
 struct ConstantBuffer
 {
-  glm::mat4   rotationMat;
-  glm::mat4   projectionMat;
-  glm::mat4   viewMat;
-  HfovxyFocal hfovxy_focal;
-  glm::mat4   transformMat;
+  glm::mat4 rotationMat;
+  glm::mat4 projectionMat;
+  glm::mat4 viewMat;
+  glm::vec3 hfovxy_focal;
+  glm::mat4 transformMat;
 };
 
 class Window
@@ -38,26 +31,26 @@ class Window
 public:
   Window(LPCTSTR WindowName, int width, int height, bool fullScreen, HINSTANCE hInstance, int nShowCmd);
 
-  virtual void                draw()            = 0;
-  //virtual std::vector<Vertex> prepareTriangle() = 0;
-  void                        Stop();
-  void                        WaitForPreviousFrame();
-  void                        Render();
-  void                        mainloop();
-  virtual void                drawUI() = 0;
+  virtual void draw() = 0;
+  // virtual std::vector<Vertex> prepareTriangle() = 0;
+  void         Stop();
+  void         WaitForPreviousFrame();
+  void         Render();
+  void         mainloop();
+  virtual void drawUI() = 0;
   void UpdateConstantBuffer(const glm::mat4& rotationMat, const glm::mat4& projectionMatrix, const glm::mat4& viewMat,
-                            HfovxyFocal hfovxy_focal, const glm::mat4& transformMat);
+                            const glm::vec3& hfovxy_focal, const glm::mat4& transformMat);
   virtual std::vector<VertexPos> prepareIndices(const std::vector<Vertex>& vertices) = 0;
 
   void UpdateVertexBuffer(const std::vector<Vertex>& vertices);
   bool InitializeVertexBuffer(const std::vector<Vertex>& vertices);
   void InitializeComputeBuffer(const std::vector<Vertex>& vertices);
 
-    bool InitializeIndexBuffer(const std::vector<uint32_t>& indices);
+  bool InitializeIndexBuffer(const std::vector<uint32_t>& indices);
   void UpdateIndexBuffer(const std::vector<uint32_t>& indices);
 
   void ResizeWindow(int width, int height);
- 
+
   Camera& getCameraReference();
 
   ~Window();
@@ -66,7 +59,7 @@ public:
   ID3D12Resource* vertexBuffer; // a default buffer in GPU memory that we will load vertex data for our triangle into
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
-    ComPtr<ID3D12Resource>  indexBuffer;
+  ComPtr<ID3D12Resource>  indexBuffer;
   D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
 protected:
