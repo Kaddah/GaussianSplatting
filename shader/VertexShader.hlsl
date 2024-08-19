@@ -25,6 +25,7 @@ struct VS_OUTPUT
     float opacity : TEXCOORD18;
     float3 conic : TEXCOORD19; 
     float3 hfovxy_focal : TEXCOORD20;
+    float2 coordxy : TEXCOORD21;
 };
 
 static const float SH_C0 = 0.2820947918f;
@@ -141,22 +142,21 @@ VS_OUTPUT main(VS_INPUT input)
                               cov3d,
                               viewMat);
 
-    // Invert covariance (EWA algorithm)
     float det = (cov2d.x * cov2d.z - cov2d.y * cov2d.y);
     
     float det_inv = 1.f / det;
     float3 conic = float3(cov2d.z * det_inv, -cov2d.y * det_inv, cov2d.x * det_inv);
     
-    float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z)); // screen space half quad height and width
-    float2 quadwh_ndc = quadwh_scr / wh * 2; // in ndc space
+    float2 quadwh_scr = float2(3.f * sqrt(cov2d.x), 3.f * sqrt(cov2d.z));
+    float2 quadwh_ndc = quadwh_scr / wh * 2;
     pos_screen.xy = pos_screen.xy + input.pos.xy * quadwh_ndc;
     float2 coordxy = input.pos.xy * quadwh_scr;
     
     output.conic = conic;
     output.hfovxy_focal = hfovxy_focal;
-    
-    
+    output.coordxy = coordxy;
+    output.opacity = input.opacity;
+
     return output;
-    
-   
 }
+
