@@ -79,6 +79,16 @@ void GaussianRenderer::drawUI()
     camera->setAlphaY(0.0f);
     camera->setAlphaZ(0.0f);
   }
+
+   if (!indices.empty()) // Ensure that the indices array is not empty
+  {
+    uint32_t firstIndexValue = indices[0];                            // Get the first value from the array
+    ImGui::Text("First value of indices array: %u", firstIndexValue); // Print the value
+  }
+  else
+  {
+    ImGui::Text("Indices array is empty."); // Handle empty array case
+  }
   ImGui::End();
 }
 
