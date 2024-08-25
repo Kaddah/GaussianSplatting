@@ -622,9 +622,13 @@ void Window::Render()
 
   if (frameCounter % 240 == 0)
   {
-    
+    // Get the absolute values of the components
+    float     absX = glm::abs(camera->getAlphaX());
+    float     absY = glm::abs(camera->getAlphaY());
+    float     absZ = glm::abs(camera->getAlphaZ());
+    glm::vec3 alphaVec(absX, absY, absZ);
   // Sortiere die Indizes basierend auf der aktuellen Kameraposition
-  SortIndicesByDepth(camera->getCameraPos(), vertices, indices);
+    SortIndicesByDepth(alphaVec, vertices, indices);
 
     frameCounter = 0;
     UpdateIndexBuffer(indices);
