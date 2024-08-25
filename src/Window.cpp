@@ -768,7 +768,7 @@ void Window::UpdatePipeline()
   camera->setRadius(radius);
   camera->setCameraTarget(cameraTarget);
 
-  drawUI();
+ // drawUI();
   imguiAdapter->renderImGui();
   imguiAdapter->commandList(commandList);
 
