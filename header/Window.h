@@ -57,7 +57,7 @@ public:
   void UpdateIndexBuffer(const std::vector<uint32_t>& indices);
 
   void ResizeWindow(int width, int height);
- 
+  int     frameCounter = 0;
   Camera& getCameraReference();
 
   ~Window();
@@ -68,6 +68,7 @@ public:
 
     ComPtr<ID3D12Resource>  indexBuffer;
   D3D12_INDEX_BUFFER_VIEW indexBufferView;
+    std::vector<uint32_t>   indices;
 
 protected:
   int  _width;
@@ -95,6 +96,8 @@ protected:
   ComPtr<ID3D12RootSignature>       computeRootSignature;
   ComPtr<ID3D12CommandAllocator>    computeCommandAllocator;
   ComPtr<ID3D12GraphicsCommandList> computeCommandList;
+  ComPtr<ID3D12CommandAllocator>    indexCommandAllocator;
+  ComPtr<ID3D12GraphicsCommandList> indexCommandList;
 
   HANDLE fenceEvent;                   // a handle to an event when our fence is unlocked by the gpu
   UINT64 fenceValue[frameBufferCount]; // this value is incremented each frame. each fence will have its own value

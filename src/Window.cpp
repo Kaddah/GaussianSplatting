@@ -616,6 +616,34 @@ void Window::Render()
 {
   HRESULT hr;
 
+  // Aktualisiere die Kameraposition, bevor die Sortierung durchgeführt wird
+  //glm::vec3 cameraPosition = camera->getCameraPos();
+
+
+  if (frameCounter % 240 == 0)
+  {
+    // Get the absolute values of the components
+    float     absX = glm::abs(camera->getAlphaX());
+    float     absY = glm::abs(camera->getAlphaY());
+    float     absZ = glm::abs(camera->getAlphaZ());
+    glm::vec3 alphaVec(absX, absY, absZ);
+  // Sortiere die Indizes basierend auf der aktuellen Kameraposition
+    SortIndicesByDepth(alphaVec, vertices, indices);
+
+    frameCounter = 0;
+    UpdateIndexBuffer(indices);
+  }
+
+  frameCounter++; // Frame-Zähler erhöhen
+
+
+
+
+
+
+   // Aktualisiere den Index-Puffer mit den neu sortierten Indizes
+ /* UpdateIndexBuffer(indices);*/
+
   UpdatePipeline();
   ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
 
@@ -641,7 +669,7 @@ void Window::mainloop()
   InitializeVertexBuffer(vertices);
 
    // Create and initialize the Index Buffer based on vertices count
-  std::vector<uint32_t> indices(vertices.size());
+  indices.resize(vertices.size());
 
   for (size_t i = 0; i < indices.size(); ++i)
   {
@@ -1013,56 +1041,59 @@ bool Window::InitializeIndexBuffer(const std::vector<uint32_t>& indices)
 
     size_t bufferSize = indices.size() * sizeof(uint32_t);
 
-    ComPtr<ID3D12CommandAllocator> commandAllocator;
-    ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
+    // Erstellt den Command Allocator und Command List nur, wenn sie noch nicht existieren
+    if (!indexCommandAllocator)
+    {
+      ThrowIfFailed(
+          device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&indexCommandAllocator)));
+    }
+
+    if (!commandList)
+    {
+      ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, indexCommandAllocator.Get(), nullptr,
+                                              IID_PPV_ARGS(&commandList)));
+    }
 
     // Create default heap for the index buffer
     CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
     CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 
     ThrowIfFailed(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                                  D3D12_RESOURCE_STATE_COPY_DEST, // Initial state for copying
-                                                  nullptr, IID_PPV_ARGS(&indexBuffer)));
+                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&indexBuffer)));
 
     indexBuffer->SetName(L"Index Buffer Resource Heap");
 
-    // Create the upload heap
+    // Create the upload heap and copy the index data to it
     CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
     ComPtr<ID3D12Resource>  indexBufferUploadHeap;
-    ThrowIfFailed(
-        device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                        D3D12_RESOURCE_STATE_GENERIC_READ, // Upload heaps must be in this state
-                                        nullptr, IID_PPV_ARGS(&indexBufferUploadHeap)));
+    ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                  D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                  IID_PPV_ARGS(&indexBufferUploadHeap)));
 
-    // Map and copy the index data to the upload heap
     void* pMappedData = nullptr;
     ThrowIfFailed(indexBufferUploadHeap->Map(0, nullptr, &pMappedData));
     memcpy(pMappedData, indices.data(), bufferSize);
     indexBufferUploadHeap->Unmap(0, nullptr);
 
-    ThrowIfFailed(commandAllocator->Reset());
+    // Nutze den vorhandenen Command Allocator und Command List
+    ThrowIfFailed(indexCommandAllocator->Reset());
+    ThrowIfFailed(commandList->Reset(indexCommandAllocator.Get(), nullptr));
 
-    // Reset the command list before recording commands
-    commandList->Reset(commandAllocator.Get(), nullptr);
-
-    // Copy from the upload heap to the default heap
     commandList->CopyBufferRegion(indexBuffer.Get(), 0, indexBufferUploadHeap.Get(), 0, bufferSize);
 
-    // Transition the index buffer to the INDEX_BUFFER state
+    // Transition des Buffers in den INDEX_BUFFER Zustand
     CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        indexBuffer.Get(),
-        D3D12_RESOURCE_STATE_COPY_DEST,     // Before the copy, it was in this state
-        D3D12_RESOURCE_STATE_INDEX_BUFFER); // After the copy, transition to this state
+        indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
     commandList->ResourceBarrier(1, &barrier);
 
-    // Close the command list
+    // Schließe die Command List
     ThrowIfFailed(commandList->Close());
 
-    // Execute the command list
+    // Führe die Command List aus
     ID3D12CommandList* ppCommandLists[] = {commandList.Get()};
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    // Wait for GPU to finish processing the command list
+    // Warten auf Abschluss der GPU-Verarbeitung
     fenceValue[frameIndex]++;
     ThrowIfFailed(commandQueue->Signal(fence[frameIndex].Get(), fenceValue[frameIndex]));
 
@@ -1072,18 +1103,10 @@ bool Window::InitializeIndexBuffer(const std::vector<uint32_t>& indices)
       WaitForSingleObject(fenceEvent, INFINITE);
     }
 
-    // Initialize the index buffer view
+    // Initialisiere den Index Buffer View
     indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
     indexBufferView.Format         = DXGI_FORMAT_R32_UINT;
     indexBufferView.SizeInBytes    = static_cast<UINT>(bufferSize);
-
-    size_t indexCount = indexBufferView.SizeInBytes / sizeof(uint32_t);
-    std::cout << "Number of indices in the buffer: " << indexCount << std::endl;
-
-    for (size_t i = 0; i < std::min(10, static_cast<int>(indices.size())); ++i)
-    {
-      std::cout << "Index " << i << ": " << indices[i] << std::endl;
-    }
 
     return true;
   }
@@ -1113,27 +1136,26 @@ void Window::UpdateIndexBuffer(const std::vector<uint32_t>& indices)
   CD3DX12_RESOURCE_DESC   resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(newValue);
   ComPtr<ID3D12Resource>  indexBufferUploadHeap;
   ThrowIfFailed(device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                                D3D12_RESOURCE_STATE_GENERIC_READ, // Upload heaps must be in this state
-                                                nullptr, IID_PPV_ARGS(&indexBufferUploadHeap)));
+                                                D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                IID_PPV_ARGS(&indexBufferUploadHeap)));
 
-  // Map the upload heap and copy the index data to it
+  // Map and copy the index data to the upload heap
   void* pMappedData = nullptr;
   ThrowIfFailed(indexBufferUploadHeap->Map(0, nullptr, &pMappedData));
   memcpy(pMappedData, indices.data(), newValue);
   indexBufferUploadHeap->Unmap(0, nullptr);
 
-  // Reset the command list and allocator before recording commands
-  ThrowIfFailed(commandAllocator->Reset());
-  ThrowIfFailed(commandList->Reset(commandAllocator->Get(), nullptr));
+ 
+  // Reuse the existing Command Allocator and Command List
+  ThrowIfFailed(indexCommandAllocator->Reset());
+  ThrowIfFailed(commandList->Reset(indexCommandAllocator.Get(), nullptr));
 
   // Copy the data from the upload heap to the index buffer in GPU memory
   commandList->CopyBufferRegion(indexBuffer.Get(), 0, indexBufferUploadHeap.Get(), 0, newValue);
 
-  // No need for a resource barrier on the upload heap, only transition the default heap resource
+  // Transition the index buffer to the INDEX_BUFFER state
   CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      indexBuffer.Get(),
-      D3D12_RESOURCE_STATE_COPY_DEST,     // Assume it was in this state after the copy
-      D3D12_RESOURCE_STATE_INDEX_BUFFER); // Transition to this state for use as an index buffer
+      indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
   commandList->ResourceBarrier(1, &barrier);
 
   // Close the command list
